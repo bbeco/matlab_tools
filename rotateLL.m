@@ -64,6 +64,7 @@ function rImg = rotateLL(img, x, y, z)
             v = (pi/2 - lat)/pi*height;
 			
 			%sampling
+			%TODO use interpolation when sampling (interp?)
             rImg(i, j) = img(max(1, ceil(v)), max(1, ceil(u)));
         end
     end
