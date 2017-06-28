@@ -26,10 +26,14 @@ points2 = detectSURFFeatures(I2);
 
 subplot(2, 2, 1);
 showFeaturePoints(I1, points1);
+title('Features found in first image');
 subplot(2, 2, 2);
 showFeaturePoints(I2, points2);
+title('Features found in second image');
 
-% Extract interesting point descriptors
+% Extract interesting point descriptors.
+% vpts stands for ValidPoinTS and is the name of the vector of keypoints whose 
+% descriptor could be computed (because they are not too close to the edge)
 [features1, vpts1] = extractFeatures(I1, points1);
 [features2, vpts2] = extractFeatures(I2, points2);
 
@@ -47,8 +51,10 @@ matchedPts2 = vpts2(indexPairs(:, 2));
 
 subplot(2, 2, 3);
 showFeaturePoints(I1, matchedPts1);
+title('feature of image1 with a correspondance in 2');
 subplot(2, 2, 4);
 showFeaturePoints(I2, matchedPts2);
+title('feature of image2 with a correpondance in 1');
 
 %% Display results
 figure;
