@@ -1,14 +1,7 @@
-function [lat, long] = cartesian2LL(p)
-%   Convert the given point to LL coordinates. The coordinate system of the
-%   input is assumed to have x and y axes pointing right and up, and the -z
-%   axe that points forward.
-%   
-%   Input:
-%       -p: a 1x3 point vector
-%   
-%   Output:
-%       -[lat, long]: 1x2 vector whose components are the latitude and 
-%       longitude angles.
+function theta = arctan(x, y)
+%   Compute the arctan of x/y for every possible quadrant
+%		Output:
+%			-theta: the result angle. This is always between -pi and + pi
 %
 %	Copyright 2017 Andrea Beconcini
 %
@@ -25,9 +18,20 @@ function [lat, long] = cartesian2LL(p)
 %	You should have received a copy of the GNU Lesser General Public License
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-
-
-
-    long = arctan(-p(3), p(1));
-    lat = arctan(sqrt(p(1)^2 + p(3)^2), p(2));
+    switch sign(x)
+        case 0
+            theta = sign(y)*pi/2;
+        case 1
+            if y ~= 0
+                theta = atan(y/x);
+            else
+                theta = 0;
+            end
+        case -1
+            if y>=0
+                theta = atan(y/x) + pi;
+            else
+                theta = atan(y/x) - pi;
+            end
+    end
 end

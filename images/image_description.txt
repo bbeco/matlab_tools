@@ -1,0 +1,8 @@
+camera in image 2 is moved with [1 0 0] and rotated by 30deg around x.
+
+img1_planar.png (img2_planar.png) is the planar transformed image of image1.png (image2.png).
+
+img1_planar_down.png (img2_planar.png) is the south emispere planar transformed image of image1.png (image2.png).
+
+img1_linear.png and img2_linera.png are testing images for LL2Planar 
+transformation.

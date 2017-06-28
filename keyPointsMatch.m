@@ -16,12 +16,18 @@
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
 
-I1 = imread('~/syntetic_scene2/0001.png');
-I2 = imread('~/syntetic_scene2/0050.png');
+%% find features
+I1 = imread('images/img1_planar.png');
+I2 = imread('images/img2_planar.png');
 
 % Extracting interest points
 points1 = detectSURFFeatures(I1);
 points2 = detectSURFFeatures(I2);
+
+subplot(2, 2, 1);
+showFeaturePoints(I1, points1);
+subplot(2, 2, 2);
+showFeaturePoints(I2, points2);
 
 % Extract interesting point descriptors
 [features1, vpts1] = extractFeatures(I1, points1);
@@ -39,55 +45,30 @@ indexPairs = matchFeatures(features1, features2, 'Unique', true);
 matchedPts1 = vpts1(indexPairs(:, 1));
 matchedPts2 = vpts2(indexPairs(:, 2));
 
+subplot(2, 2, 3);
+showFeaturePoints(I1, matchedPts1);
+subplot(2, 2, 4);
+showFeaturePoints(I2, matchedPts2);
+
 %% Display results
-% figure;
-% ax = axes;
-% showMatchedFeatures(I1, I2, matchedPts1, matchedPts2, 'montage', 'Parent', ax);
-% title(ax, 'Candidate point matches');
-p = [-1, -1];
-while 1
-	showMatches(I1, I2, matchedPts1, matchedPts2, p);
-	p = ginput(1);
+figure;
+ax = axes;
+showMatchedFeatures(I1, I2, matchedPts1, matchedPts2, 'montage', 'Parent', ax);
+title(ax, 'Candidate point matches');
+% p = [-1, -1];
+% while 1
+% 	showMatches(I1, I2, matchedPts1, matchedPts2, p);
+% 	p = ginput(1);
+% end
+
+%% compute E
+cameraParams = cameraParameters;
+[E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1, matchedPts2, cameraParams);
+if status ~= 0
+	disp('some error occurred');
 end
 
-function showMatches(I1, I2, points1, points2, selectedPoint)
-	subplot(2, 1, 1);
-	I1 = insertMarker(I1, points1, 'o', 'Color', 'red');
-	imshow(I1);
-	
-	subplot(2, 1, 2);
-	imshow(I2);
-	
-	if selectedPoint(1) < 0 || selectedPoint(2) < 0
-		return;
-	end
+inliersPoints1 = matchedPts1(inliersIndex);
+inliersPoints2 = matchedPts2(inliersIndex);
 
-	i = closestPoint(selectedPoint, points1.Location);
-
-	subplot(2, 1, 1);
-	hold on;
-	x = points1.Location(i, :);
-	plot(x(1), x(2),'g+');
-	hold off;
-
-	subplot(2, 1, 2);
-	x = points2.Location(i, :);
-	hold on;
-	plot(x(1), x(2), 'go');
-	hold off;
-	
-end
-
-function index = closestPoint(p, v)
-	[r, c] = size(v);
-	min = sqrt(sum((p - v(1, :)).^2));
-	index = 1;
-	
-	for i = 2:r
-		d = sqrt(sum((p - v(i, :)).^2));
-		if d < min
-			min = d;
-			index = i;
-		end
-	end
-end
+[orientation, location] = relativeCameraPose(E, cameraParams, inliersPoints1, inliersPoints2)
