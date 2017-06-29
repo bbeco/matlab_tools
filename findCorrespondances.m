@@ -1,4 +1,4 @@
-[matchedPoints1, matchedPoints2] = function findCorrespondances(I1, I2)
+[matchedPts1, matchedPts2] = function findCorrespondances(I1, I2)
 %	This function detects keypoints in both input images and find 
 %	correspondances among them.
 %
@@ -38,6 +38,9 @@
 	points2 = detectSURFFeatures(I2);
 
 	% Extract interesting point descriptors
+	% vpts stands for ValidPoinTS and it is the name of the vector of keypoints
+	% whose descriptor could be computed (because they are not too close to the 
+	% edge)
 	[features1, vpts1] = extractFeatures(I1, points1);
 	[features2, vpts2] = extractFeatures(I2, points2);
 
