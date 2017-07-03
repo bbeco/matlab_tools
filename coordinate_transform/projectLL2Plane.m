@@ -1,10 +1,10 @@
 function [u, v, z] = projectLL2Plane(lat, long, size)
-%   compute the coordinate [u, v] of the projection of the 3D point whose LL 
+%   compute the coordinate [u, v] of the projection of the 3D point whose LL
 %	coordinates are given as input. This point coordinates are first transformed
 %	in cartesian and then the z component is dropped.
 %   The u, v plane is the same as the x, y plane and the u and v axes have the
-%   same direction of the x and y respectively. The origin of the uv coordinate
-%   systeme is put on the top left corner of the image.
+%   same direction of the x and y axes respectively. The origin of the uv
+%   coordinate system is put on the top left corner of the image.
 % 
 % 	Input:
 % 		-lat: latitude value (in radians)

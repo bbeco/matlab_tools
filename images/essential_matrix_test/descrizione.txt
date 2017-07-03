@@ -1,0 +1,5 @@
+pers1.png e pers2.png sono le immagini prima e dopo una traslazione lungo 
+l'assse X locale delle fotocamera in Blender ed una rotazione di -30gradi 
+rispetto all'asse Y locale in Blender.
+
+ll1.png e ll2.png sono l'equivalente delle precedenti ma con fotocamera 360.

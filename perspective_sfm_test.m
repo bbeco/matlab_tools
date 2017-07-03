@@ -17,8 +17,8 @@
 %
 
 %% find features
-I1 = imread('images/pers1.png');
-I2 = imread('images/pers2.png');
+I1 = imread('images/essential_matrix_test/pers1.png');
+I2 = imread('images/essential_matrix_test/pers2.png');
 I1 = rgb2gray(I1);
 I2 = rgb2gray(I2);
 
@@ -74,7 +74,12 @@ addpath('utils/');
 
 %% compute E
 % Create a default camera parameter structure
-cameraParams = cameraParameters;
+K = eye(3);
+[r, c] = size(I1);
+u0 = c/2;
+v0 = r/2;
+K(:, 3) = [u0; v0; 1];
+cameraParams = cameraParameters('IntrinsicMatrix', K');
 [E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1, matchedPts2, cameraParams);
 if status ~= 0
 	disp('some error occurred');
@@ -85,11 +90,10 @@ inlierPoints2 = matchedPts2(inliersIndex);
 
 disp(['Inlier points: ', num2str(length(inlierPoints1))]);
 
-[orientation, location] = relativeCameraPose(E, cameraParams, inlierPoints1, inlierPoints2)
+[orientation, location, validPointsFraction] = relativeCameraPose(E, cameraParams, inlierPoints1, inlierPoints2)
 
 %% Checking epipolar contraint
-K = cameraParams.IntrinsicMatrix';
-%Kinv = inv(K);
+% Kinv = inv(K);
 epipolarConstraintError = zeros(length(inlierPoints1), 1);
 for i = 1:length(inlierPoints1)
 	m1 = inlierPoints1.Location(i, :);
@@ -100,4 +104,4 @@ for i = 1:length(inlierPoints1)
 	p2 = K/m2;
 	epipolarConstraintError(i) = abs(p2'*E*p1);
 end
-mean(epipolarConstraintError)
+disp(['mean absolute error: ', num2str(mean(epipolarConstraintError))]);
