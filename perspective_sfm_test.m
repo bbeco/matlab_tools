@@ -83,6 +83,8 @@ end
 inlierPoints1 = matchedPts1(inliersIndex);
 inlierPoints2 = matchedPts2(inliersIndex);
 
+disp(['Inlier points: ', num2str(length(inlierPoints1))]);
+
 [orientation, location] = relativeCameraPose(E, cameraParams, inlierPoints1, inlierPoints2)
 
 %% Checking epipolar contraint
