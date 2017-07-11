@@ -95,7 +95,11 @@ for i = 1:size(matchedPts1, 1)
 	long = LLu1/width*2*pi - pi;
 	lat = pi/2 - LLv1/height*pi;
 	[x1, y1, z1] = LL2Cartesian(lat, long);
-	m1 = perspectiveProjection([x1, y1, z1], f, u0, v0);
+	% Moving the center of projection for the new perspective projection means 
+	% changing the coordinate sys (translate along the Z-axis) and then
+	% projecting.
+	translatedZ1 = z1 + f;
+	m1 = perspectiveProjection([x1, y1, translatedZ1], f, u0, v0);
 	if ~isequal(m1 >= 0 & m1 <= dim, [1, 1])
 		continue;
 	end
@@ -106,7 +110,11 @@ for i = 1:size(matchedPts1, 1)
 	long = LLu2/width*2*pi - pi;
 	lat = pi/2 - LLv2/height*pi;
 	[x2, y2, z2] = LL2Cartesian(lat, long);
-	m2 = perspectiveProjection([x2, y2, z2], f, u0, v0);
+	% Moving the center of projection for the new perspective projection means 
+	% changing the coordinate sys (translate along the Z-axis) and then
+	% projecting.
+	translatedZ2 = z2 + f;
+	m2 = perspectiveProjection([x2, y2, translatedZ2], f, u0, v0);
 	if ~isequal(m2 >= 0 & m2 <= dim, [1, 1])
 		continue;
 	end
