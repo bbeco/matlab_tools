@@ -17,8 +17,8 @@
 %
 
 %% find features
-I1 = imread('images/essential_matrix_test/pers1.png');
-I2 = imread('images/essential_matrix_test/pers2.png');
+I1 = imread('images/pers1.png');
+I2 = imread('images/pers2.png');
 I1 = rgb2gray(I1);
 I2 = rgb2gray(I2);
 
@@ -74,11 +74,15 @@ addpath('utils/');
 
 %% compute E
 % Create a default camera parameter structure
-K = eye(3);
-[r, c] = size(I1);
-u0 = c/2;
-v0 = r/2;
-K(:, 3) = [u0; v0; 1];
+% K = eye(3);
+% [r, c] = size(I1);
+% u0 = c/2;
+% v0 = r/2;
+% K(:, 3) = [u0; v0; 1];
+K = [
+	1050,	0,	480;
+	0,	1050,	270;
+	0,	0,	1;];
 cameraParams = cameraParameters('IntrinsicMatrix', K');
 [E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1, matchedPts2, cameraParams);
 if status ~= 0

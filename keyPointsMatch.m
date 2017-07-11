@@ -28,12 +28,12 @@ points2 = detectSURFFeatures(I2);
 % points1 = detectHarrisFeatures(I1);
 % points2 = detectHarrisFeatures(I2);
 
-subplot(2, 2, 1);
-showFeaturePoints(I1, points1);
-title('Features found in first image');
-subplot(2, 2, 2);
-showFeaturePoints(I2, points2);
-title('Features found in second image');
+% subplot(2, 2, 1);
+% showFeaturePoints(I1, points1);
+% title('Features found in first image');
+% subplot(2, 2, 2);
+% showFeaturePoints(I2, points2);
+% title('Features found in second image');
 
 % Extract interesting point descriptors.
 % vpts stands for ValidPoinTS and is the name of the vector of keypoints whose 
@@ -53,12 +53,12 @@ indexPairs = matchFeatures(features1, features2, 'Unique', true);
 matchedPts1 = vpts1(indexPairs(:, 1));
 matchedPts2 = vpts2(indexPairs(:, 2));
 
-subplot(2, 2, 3);
-showFeaturePoints(I1, matchedPts1);
-title('feature of image1 with a correspondance in 2');
-subplot(2, 2, 4);
-showFeaturePoints(I2, matchedPts2);
-title('feature of image2 with a correpondance in 1');
+% subplot(2, 2, 3);
+% showFeaturePoints(I1, matchedPts1);
+% title('feature of image1 with a correspondance in 2');
+% subplot(2, 2, 4);
+% showFeaturePoints(I2, matchedPts2);
+% title('feature of image2 with a correpondance in 1');
 
 %% Display results
 % figure;
@@ -86,29 +86,39 @@ v0 = u0;
 frontCount = 0;
 backCount = 0;
 addpath('coordinate_transform/');
-for i = 1:length(matchedPts1)
+% focal lenght for the new planar projection
+f = 1;
+for i = 1:size(matchedPts1, 1)
 	% 
 	LLu1 = matchedPts1.Location(i, 1);
 	LLv1 = matchedPts1.Location(i, 2);
 	long = LLu1/width*2*pi - pi;
 	lat = pi/2 - LLv1/height*pi;
-	[u1, v1, z1] = projectLL2Plane(lat, long, dim);
+	[x1, y1, z1] = LL2Cartesian(lat, long);
+	m1 = perspectiveProjection([x1, y1, z1], f, u0, v0);
+	if ~isequal(m1 >= 0 & m1 <= dim, [1, 1])
+		continue;
+	end
 	
 	%
 	LLu2 = matchedPts2.Location(i, 1);
 	LLv2 = matchedPts2.Location(i, 2);
 	long = LLu2/width*2*pi - pi;
 	lat = pi/2 - LLv2/height*pi;
-	[u2, v2, z2] = projectLL2Plane(lat, long, dim);
+	[x2, y2, z2] = LL2Cartesian(lat, long);
+	m2 = perspectiveProjection([x2, y2, z2], f, u0, v0);
+	if ~isequal(m2 >= 0 & m2 <= dim, [1, 1])
+		continue;
+	end
 	
 	if z1 >= 0 && z2 >= 0
 		frontCount = frontCount + 1;
-		frontEmisphereMatches1(frontCount, :) = [u1, v1];
-		frontEmisphereMatches2(frontCount, :) = [u2, v2];
+		frontEmisphereMatches1(frontCount, :) = m1;
+		frontEmisphereMatches2(frontCount, :) = m2;
 	elseif z1 < 0 && z2 < 0
 		backCount = backCount+ 1;
-		backEmisphereMatches1(backCount, :) = [u1, v1];
-		backEmisphereMatches2(backCount, :) = [u2, v2];
+		backEmisphereMatches1(backCount, :) = m1;
+		backEmisphereMatches2(backCount, :) = m2;
 	end
 end
 
@@ -125,8 +135,12 @@ end
 
 %% compute E
 %initializing camera parameters;
-K = eye(3);
-K(:, 3) = [u0; v0; 1];
+% K = eye(3);
+K = [
+	f,	0,	u0;
+	0,	f,	v0;
+	0,	0,	1;];
+% K(:, 3) = [u0; v0; 1];
 cameraParams = cameraParameters('IntrinsicMatrix', K');
 [E, inliersIndex, status] = estimateEssentialMatrix(emisphereMatches1, emisphereMatches2, cameraParams);
 if status ~= 0
