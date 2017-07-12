@@ -16,9 +16,11 @@
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
 
+clear all;
+
 %% find features
-I1 = imread('images/essential_matrix_test/ll1.png');
-I2 = imread('images/essential_matrix_test/ll2.png');
+I1 = imread('/tmp/ll0.png');
+I2 = imread('/tmp/ll1.png');
 I1 = rgb2gray(I1);
 I2 = rgb2gray(I2);
 
