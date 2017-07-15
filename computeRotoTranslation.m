@@ -18,11 +18,6 @@ function [orientation, translation, algebraicError, validPointsFraction] = compu
 %
 
 	%% find features
-	I1 = imread('images/essential_matrix_test/ll0.png');
-	I2 = imread('images/essential_matrix_test/ll6.png');
-	I1 = rgb2gray(I1);
-	I2 = rgb2gray(I2);
-
 	% Extracting interest points
 	points1 = detectSURFFeatures(I1);
 	points2 = detectSURFFeatures(I2);
