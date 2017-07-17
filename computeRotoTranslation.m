@@ -98,13 +98,16 @@ function [orientation, translation, algebraicError, validPointsFraction] = compu
 	end
 
 	%selecting the emisphere with more feature matches
-	if frontCount >= backCount
+	%if frontCount >= backCount
+	if false
 		emisphereMatches1 = SURFPoints(frontEmisphereMatches1(1:frontCount, :));
 		emisphereMatches2 = SURFPoints(frontEmisphereMatches2(1:frontCount, :));
+		usingBackFace = false;
 		disp([num2str(frontCount), ' matches in the front emisphere']);
 	else
 		emisphereMatches1 = SURFPoints(backEmisphereMatches1(1:backCount, :));
 		emisphereMatches2 = SURFPoints(backEmisphereMatches2(1:backCount, :));
+		usingBackFace = true;
 		disp([num2str(backCount), ' matches in the back emisphere']);
 	end
 
@@ -123,7 +126,12 @@ function [orientation, translation, algebraicError, validPointsFraction] = compu
 	inliersPoints1 = emisphereMatches1(inliersIndex);
 	inliersPoints2 = emisphereMatches2(inliersIndex);
 
-	[orientation, translation, validFraction] = relativeCameraPose(E, cameraParams, inliersPoints1, inliersPoints2)
+	[orientation, translation, validFraction] = relativeCameraPose(E, cameraParams, inliersPoints1, inliersPoints2);
+	% Fixing direction for x and z translation when backFace is used
+	if usingBackFace
+		translation(1) = -translation(1);
+		translation(3) = -translation(3);
+	end
 
 	if nargout > 3
 		validPointsFraction = validFraction;
@@ -131,7 +139,7 @@ function [orientation, translation, algebraicError, validPointsFraction] = compu
 
 	%% Checking epipolar contraint
 	if nargout > 2
-		algebraicError = zeros(length(inliersPoints1), 1);
+		epipolarError = zeros(length(inliersPoints1), 1);
 		for i = 1:length(inliersPoints1)
 			m1 = inliersPoints1.Location(i, :);
 			m1(3) = 1;
@@ -139,6 +147,8 @@ function [orientation, translation, algebraicError, validPointsFraction] = compu
 			m2 = inliersPoints2.Location(i, :);
 			m2(3) = 1;
 			p2 = K/m2;
-			algebraicError(i) = abs(p2'*E*p1);
+			epipolarError(i) = abs(p2'*E*p1);
 		end
 	end
+	algebraicError = mean(epipolarError);
+end
