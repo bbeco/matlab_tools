@@ -26,6 +26,6 @@ function [lat, long] = extractLLCoordinateFromImage(u, v, width, height)
 %	You should have received a copy of the GNU Lesser General Public License
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-    long = LLu2/width*2*pi - pi;
-    lat = pi/2 - LLv2/height*pi;
+    long = u/width*2*pi - pi;
+    lat = pi/2 - v/height*pi;
 end
