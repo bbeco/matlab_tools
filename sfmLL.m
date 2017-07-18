@@ -1,7 +1,7 @@
 clear all;
 addpath('utils/');
-%imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll2.png', 'll3.png', 'll4.png', 'll5.png', 'll6.png'});
-imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll6.png'});
+% imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll2.png', 'll3.png', 'll4.png', 'll5.png', 'll6.png'});
+imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll4.png'});
 	
 imds = imageDatastore(imageDir);
 

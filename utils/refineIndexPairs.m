@@ -45,7 +45,7 @@ function [refinedIndexPairs, usingBackFace] = refineIndexPairs(indexPairs, point
 	end
 
 	%selecting the emisphere with more feature matches
-	if frontCount >= backCount
+	if true
 		refinedIndexPairs = frontFaceIndexPairs(1:frontCount, :);
 		usingBackFace = false;
 	else

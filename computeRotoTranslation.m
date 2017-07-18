@@ -99,7 +99,7 @@ function [orientation, translation, algebraicError, validPointsFraction] = compu
 
 	%selecting the emisphere with more feature matches
 	%if frontCount >= backCount
-	if false
+	if true
 		emisphereMatches1 = SURFPoints(frontEmisphereMatches1(1:frontCount, :));
 		emisphereMatches2 = SURFPoints(frontEmisphereMatches2(1:frontCount, :));
 		usingBackFace = false;
