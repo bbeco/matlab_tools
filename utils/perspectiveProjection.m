@@ -37,7 +37,7 @@ function m = perspectiveProjection(M, f, u0, v0)
 		x = M(i, :);
 		x(4) = 1;
 		image_point = P*x';
-		m(i, :) = image_point(1:2)/image_point(3)';
+		m(i, :) = image_point(1:2)'/image_point(3);
 	end
 end
 		

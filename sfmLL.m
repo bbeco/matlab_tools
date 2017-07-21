@@ -1,13 +1,17 @@
+%% Init
 clear all;
 addpath('utils/');
 % imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll2.png', 'll3.png', 'll4.png', 'll5.png', 'll6.png'});
-imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll4.png'});
+imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png'});
 	
 imds = imageDatastore(imageDir);
 
+% Suppress figure warnings
+warning('off', 'images:initSize:adjustingMag');
+
 % Display the images.
-figure
-montage(imds.Files, 'Size', [4, 2]);
+% figure
+% montage(imds.Files, 'Size', [4, 2]);
 
 % Convert the images to grayscale.
 images = cell(1, numel(imds.Files));
@@ -16,12 +20,39 @@ for i = 1:numel(imds.Files)
     images{i} = rgb2gray(I);
 end
 
-title('Input Image Sequence');
+% title('Input Image Sequence');
 
+% projecting parameters
+[height, width] = size(I);
+dim = min(height, width);
+f = 1;
+u0 = dim/2;
+v0 = u0;
+K = [
+	f,	0,	u0;
+	0,	f,	v0;
+	0,	0,	1;];
+cameraParams = cameraParameters('IntrinsicMatrix', K');
+
+%% Processing first image
 % Load first image
 I = images{1};
 
 prevPoints = detectSURFFeatures(I);
+
+[prevPointsConversion, llIndexes] = createPointsConversionTable(...
+	prevPoints, width, height, dim);
+% remove all points that do not fit in image plane
+prevPoints = prevPoints(llIndexes);
+% remove all points that do not belong to the front projection
+frontIndexes = findFrontProjectionIndexes(prevPointsConversion);
+if length(frontIndexes) < 8
+	error(['Too less key points in front face for image ', num2str(1)]);
+end
+prevPoints = prevPoints(frontIndexes);
+for j = 1:length(prevPointsConversion)
+	prevPointsConversion{j} = prevPointsConversion{j}(frontIndexes, :);
+end
 
 % Extract features. Using 'Upright' features improves matching, as long as
 % the camera motion involves little or no in-plane rotation.
@@ -35,45 +66,104 @@ vSet = viewSet;
 % and the origin, oriented along the Z-axis.
 viewId = 1;
 
-%projecting points
-[height, width] = size(I);
-dim = min(height, width);
-f = 1;
-u0 = dim/2;
-v0 = u0;
-K = [
-	f,	0,	u0;
-	0,	f,	v0;
-	0,	0,	1;];
-cameraParams = cameraParameters('IntrinsicMatrix', K');
-
-prevPointsConversion = createPointsConversionTable(...
-	prevPoints.Location, width, height, dim);
-
-vSet = addView(vSet, viewId, 'Points', prevPointsConversion{2},'Orientation', ...
+vSet = addView(vSet, viewId, 'Points', SURFPoints(prevPointsConversion{1}),'Orientation', ...
     eye(3, 'like', prevPoints.Location), 'Location', ...
     zeros(1, 3, 'like', prevPoints.Location));
 
-for i = 2:numel(images)
+%% Processing second image
+% load second image
+I = images{2};
+
+viewId = 2;
+
+% Detect, extract and match features.
+currPoints = detectSURFFeatures(I);
+
+[currPointsConversion, llIndexes] = createPointsConversionTable(...
+	currPoints, width, height, dim);
+% Remove all points that does not fit in the front projection image
+currPoints = currPoints(llIndexes);
+% Remove all points that does not belong to the front projection
+frontIndexes = findFrontProjectionIndexes(currPointsConversion);
+if length(frontIndexes) < 8
+	error(['Too less key points in front face for image ', num2str(2)]);
+end
+currPoints = currPoints(frontIndexes);
+for j = 1:length(currPointsConversion)
+	currPointsConversion{j} = currPointsConversion{j}(frontIndexes, :);
+end
+
+currFeatures = extractFeatures(I, currPoints);
+indexPairs = matchFeatures(prevFeatures, currFeatures, ...
+	'Unique',  true);
+
+% Select matched points.
+projectedMatches1 = SURFPoints(prevPointsConversion{1}(indexPairs(:, 1), :));
+projectedMatches2 = SURFPoints(currPointsConversion{1}(indexPairs(:, 2), :));
+
+% Estimate the camera pose of current view relative to the previous view.
+% The pose is computed up to scale, meaning that the distance between
+% the cameras in the previous view and the current view is set to 1.
+% This will be corrected by the bundle adjustment.
+[relativeOrient, relativeLoc, inlierIdx] = helperEstimateRelativePose(...
+	projectedMatches1, projectedMatches2, cameraParams);
+
+% prevCamMatrix = cameraMatrix(cameraParams, eye(3), [0, 0, 0]);
+% currCamMatrix = cameraMatrix(cameraParams, relativeOrient, relativeLoc);
+% prevWorldPoints = triangulate(projectedMatches1, projectedMatches2, prevCamMatrix, currCamMatrix);
+
+% Add the current view to the view set.
+vSet = addView(vSet, viewId, 'Points', SURFPoints(currPointsConversion{1}));
+
+% Store the point matches between the previous and the current views.
+vSet = addConnection(vSet, 1, 2, 'Matches', indexPairs(inlierIdx,:));
+
+% Get the table containing the previous camera pose.
+prevPose = poses(vSet, 1);
+prevOrientation = prevPose.Orientation{1};
+prevLocation    = prevPose.Location{1};
+
+% Compute the current camera pose in the global coordinate system
+% relative to the first view.
+orientation = relativeOrient * prevOrientation;
+location    = prevLocation + relativeLoc * prevOrientation;
+vSet = updateView(vSet, viewId, 'Orientation', orientation, ...
+	'Location', location);
+
+% updating variables before next iteration
+prevPoints = currPoints;
+prevPointsConversion = currPointsConversion;
+prevFeatures = currFeatures;
+
+%% Processing all the other images
+for i = 3:numel(images)
     % Undistort the current image.
     I = images{i};
 
     % Detect, extract and match features.
     currPoints = detectSURFFeatures(I);
-	currPointsConversion = createPointsConversionTable(...
-		currPoints.Location, width, height, dim);
+	
+	[currPointsConversion, llIndexes] = createPointsConversionTable(...
+		currPoints, width, height, dim);
+	% Remove all points that does not fit in the front projection image
+	currPoints = currPoints(llIndexes);
+	% Remove all points that does not belong to the front projection
+	frontIndexes = findFrontProjectionIndexes(currPointsConversion);
+	if length(frontIndexes) < 8
+		error(['Too less key points in front face for image ', num2str(i)]);
+	end
+	currPoints = currPoints(frontIndexes);
+	for j = 1:length(currPointsConversion)
+		currPointsConversion{j} = currPointsConversion{j}(frontIndexes, :);
+	end
+	
     currFeatures = extractFeatures(I, currPoints);
     indexPairs = matchFeatures(prevFeatures, currFeatures, ...
         'MaxRatio', .7, 'Unique',  true);
-	
-	% The pairs to be used for motion estimation must be refined in order to 
-	% consider the additional projection required by full spherical cameras.
-	[refinedIndexPairs, usingBackFace] = refineIndexPairs(...
-		indexPairs, prevPoints.Location, currPoints.Location, width, height);
 
     % Select matched points.
-    projectedMatches1 = prevPointsConversion{2}(refinedIndexPairs(:, 1), :);
-    projectedMatches2 = currPointsConversion{2}(refinedIndexPairs(:, 2), :);
+    projectedMatches1 = SURFPoints(prevPointsConversion{1}(indexPairs(:, 1), :));
+    projectedMatches2 = SURFPoints(currPointsConversion{1}(indexPairs(:, 2), :));
 
     % Estimate the camera pose of current view relative to the previous view.
     % The pose is computed up to scale, meaning that the distance between
@@ -82,17 +172,11 @@ for i = 2:numel(images)
     [relativeOrient, relativeLoc, inlierIdx] = helperEstimateRelativePose(...
         projectedMatches1, projectedMatches2, cameraParams);
 	
-	% Fix axes direction when using backFace projection.
-	if usingBackFace
-		relativeLoc(1) = -relativeLoc(1);
-		relativeLoc(3) = -relativeLoc(3);
-	end
-	
     % Add the current view to the view set.
-    vSet = addView(vSet, i, 'Points', currPointsConversion{2});
+    vSet = addView(vSet, i, 'Points', SURFPoints(currPointsConversion{1}));
 
     % Store the point matches between the previous and the current views.
-    vSet = addConnection(vSet, i-1, i, 'Matches', refinedIndexPairs(inlierIdx,:));
+    vSet = addConnection(vSet, i-1, i, 'Matches', indexPairs(inlierIdx,:));
 
     % Get the table containing the previous camera pose.
     prevPose = poses(vSet, i-1);
@@ -124,7 +208,7 @@ for i = 2:numel(images)
     vSet = updateView(vSet, camPoses);
 
     prevFeatures = currFeatures;
-    prevPoints   = currPoints;
+	prevPoints = currPoints;
 	prevPointsConversion = currPointsConversion;
 end
 
