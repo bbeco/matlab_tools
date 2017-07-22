@@ -1,5 +1,5 @@
 %% Init
-clear all;
+clear variables;
 addpath('utils/');
 % imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll2.png', 'll3.png', 'll4.png', 'll5.png', 'll6.png'});
 imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png'});
@@ -23,7 +23,7 @@ end
 % title('Input Image Sequence');
 
 % projecting parameters
-[height, width] = size(I);
+[height, width] = size(images{1});
 dim = min(height, width);
 f = 1;
 u0 = dim/2;
@@ -40,18 +40,13 @@ I = images{1};
 
 prevPoints = detectSURFFeatures(I);
 
-[prevPointsConversion, llIndexes] = createPointsConversionTable(...
+[prevPointsConversion, prevLLIndexes] = createPointsConversionTable(...
 	prevPoints, width, height, dim);
-% remove all points that do not fit in image plane
-prevPoints = prevPoints(llIndexes);
-% remove all points that do not belong to the front projection
-frontIndexes = findFrontProjectionIndexes(prevPointsConversion);
-if length(frontIndexes) < 8
+% remove all points that do not fit in image plane or that do not belong to the 
+% front projection.
+prevPoints = prevPoints(prevLLIndexes, :);
+if length(prevPoints) < 8
 	error(['Too less key points in front face for image ', num2str(1)]);
-end
-prevPoints = prevPoints(frontIndexes);
-for j = 1:length(prevPointsConversion)
-	prevPointsConversion{j} = prevPointsConversion{j}(frontIndexes, :);
 end
 
 % Extract features. Using 'Upright' features improves matching, as long as
@@ -66,7 +61,7 @@ vSet = viewSet;
 % and the origin, oriented along the Z-axis.
 viewId = 1;
 
-vSet = addView(vSet, viewId, 'Points', SURFPoints(prevPointsConversion{1}),'Orientation', ...
+vSet = addView(vSet, viewId, 'Points', SURFPoints(prevPointsConversion),'Orientation', ...
     eye(3, 'like', prevPoints.Location), 'Location', ...
     zeros(1, 3, 'like', prevPoints.Location));
 
@@ -79,27 +74,26 @@ viewId = 2;
 % Detect, extract and match features.
 currPoints = detectSURFFeatures(I);
 
-[currPointsConversion, llIndexes] = createPointsConversionTable(...
+[currPointsConversion, currLLIndexes] = createPointsConversionTable(...
 	currPoints, width, height, dim);
 % Remove all points that does not fit in the front projection image
-currPoints = currPoints(llIndexes);
-% Remove all points that does not belong to the front projection
-frontIndexes = findFrontProjectionIndexes(currPointsConversion);
-if length(frontIndexes) < 8
-	error(['Too less key points in front face for image ', num2str(2)]);
-end
-currPoints = currPoints(frontIndexes);
-for j = 1:length(currPointsConversion)
-	currPointsConversion{j} = currPointsConversion{j}(frontIndexes, :);
-end
+currPoints = currPoints(currLLIndexes, :);
 
 currFeatures = extractFeatures(I, currPoints);
+
 indexPairs = matchFeatures(prevFeatures, currFeatures, ...
-	'Unique',  true);
+	'Unique', true);
+% [prevPointsConversion, prevLLIndexes] = createPointsConversionTable(...
+% 	prevPoints(indexPairs(:, 1), :), width, height, dim);
+% [currPointsConversion, currLLIndexes] = createPointsConversionTable(...
+% 	currPoints(indexPairs(:, 2), :), width, height, dim);
 
 % Select matched points.
-projectedMatches1 = SURFPoints(prevPointsConversion{1}(indexPairs(:, 1), :));
-projectedMatches2 = SURFPoints(currPointsConversion{1}(indexPairs(:, 2), :));
+projectedMatches1 = SURFPoints(prevPointsConversion(indexPairs(:, 1), :));
+projectedMatches2 = SURFPoints(currPointsConversion(indexPairs(:, 2), :));
+
+% DEBUG
+% disp(projectedMatches1);
 
 % Estimate the camera pose of current view relative to the previous view.
 % The pose is computed up to scale, meaning that the distance between
@@ -113,7 +107,7 @@ projectedMatches2 = SURFPoints(currPointsConversion{1}(indexPairs(:, 2), :));
 % prevWorldPoints = triangulate(projectedMatches1, projectedMatches2, prevCamMatrix, currCamMatrix);
 
 % Add the current view to the view set.
-vSet = addView(vSet, viewId, 'Points', SURFPoints(currPointsConversion{1}));
+vSet = addView(vSet, viewId, 'Points', SURFPoints(currPointsConversion));
 
 % Store the point matches between the previous and the current views.
 vSet = addConnection(vSet, 1, 2, 'Matches', indexPairs(inlierIdx,:));
@@ -218,6 +212,10 @@ figure;
 plotCamera(camPoses, 'Size', 0.2);
 hold on
 
+xlabel('X');
+ylabel('Y');
+zlabel('Z');
+
 % Exclude noisy 3-D points.
 goodIdx = (reprojectionErrors < 5);
 xyzPoints = xyzPoints(goodIdx, :);
@@ -234,8 +232,5 @@ xlim([loc1(1)-5, loc1(1)+4]);
 ylim([loc1(2)-5, loc1(2)+4]);
 zlim([loc1(3)-1, loc1(3)+20]);
 camorbit(0, -30);
-xlabel('X');
-ylabel('Y');
-zlabel('Z');
 
 title('Refined Camera Poses');
