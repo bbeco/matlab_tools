@@ -8,4 +8,4 @@ for i = 1:numel(imds.Files)
     I = readimage(imds, i);
     images{i} = rgb2gray(I);
 end
-[orientation, translation, algebraicError, validPointsFraction] = computeRotoTranslation(images{1}, images{2})
+[orientation, translation, algebraicError, validPointsFraction] = computeRotoTranslation(images{2}, images{5})

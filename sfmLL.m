@@ -2,7 +2,7 @@
 clear variables;
 addpath('utils/');
 % imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll2.png', 'll3.png', 'll4.png', 'll5.png', 'll6.png'});
-imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png'});
+imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll4.png'});
 	
 imds = imageDatastore(imageDir);
 
@@ -82,18 +82,11 @@ currPoints = currPoints(currLLIndexes, :);
 currFeatures = extractFeatures(I, currPoints);
 
 indexPairs = matchFeatures(prevFeatures, currFeatures, ...
-	'Unique', true);
-% [prevPointsConversion, prevLLIndexes] = createPointsConversionTable(...
-% 	prevPoints(indexPairs(:, 1), :), width, height, dim);
-% [currPointsConversion, currLLIndexes] = createPointsConversionTable(...
-% 	currPoints(indexPairs(:, 2), :), width, height, dim);
+	'MaxRatio', .7, 'Unique', true);
 
 % Select matched points.
 projectedMatches1 = SURFPoints(prevPointsConversion(indexPairs(:, 1), :));
 projectedMatches2 = SURFPoints(currPointsConversion(indexPairs(:, 2), :));
-
-% DEBUG
-% disp(projectedMatches1);
 
 % Estimate the camera pose of current view relative to the previous view.
 % The pose is computed up to scale, meaning that the distance between
@@ -137,18 +130,12 @@ for i = 3:numel(images)
     % Detect, extract and match features.
     currPoints = detectSURFFeatures(I);
 	
-	[currPointsConversion, llIndexes] = createPointsConversionTable(...
+	[currPointsConversion, currLLIndexes] = createPointsConversionTable(...
 		currPoints, width, height, dim);
 	% Remove all points that does not fit in the front projection image
-	currPoints = currPoints(llIndexes);
-	% Remove all points that does not belong to the front projection
-	frontIndexes = findFrontProjectionIndexes(currPointsConversion);
-	if length(frontIndexes) < 8
+	currPoints = currPoints(currLLIndexes, :);
+	if length(currPoints) < 8
 		error(['Too less key points in front face for image ', num2str(i)]);
-	end
-	currPoints = currPoints(frontIndexes);
-	for j = 1:length(currPointsConversion)
-		currPointsConversion{j} = currPointsConversion{j}(frontIndexes, :);
 	end
 	
     currFeatures = extractFeatures(I, currPoints);
@@ -156,8 +143,8 @@ for i = 3:numel(images)
         'MaxRatio', .7, 'Unique',  true);
 
     % Select matched points.
-    projectedMatches1 = SURFPoints(prevPointsConversion{1}(indexPairs(:, 1), :));
-    projectedMatches2 = SURFPoints(currPointsConversion{1}(indexPairs(:, 2), :));
+    projectedMatches1 = SURFPoints(prevPointsConversion(indexPairs(:, 1), :));
+    projectedMatches2 = SURFPoints(currPointsConversion(indexPairs(:, 2), :));
 
     % Estimate the camera pose of current view relative to the previous view.
     % The pose is computed up to scale, meaning that the distance between
@@ -167,7 +154,7 @@ for i = 3:numel(images)
         projectedMatches1, projectedMatches2, cameraParams);
 	
     % Add the current view to the view set.
-    vSet = addView(vSet, i, 'Points', SURFPoints(currPointsConversion{1}));
+    vSet = addView(vSet, i, 'Points', SURFPoints(currPointsConversion));
 
     % Store the point matches between the previous and the current views.
     vSet = addConnection(vSet, i-1, i, 'Matches', indexPairs(inlierIdx,:));
