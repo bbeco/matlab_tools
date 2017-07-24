@@ -1,4 +1,4 @@
-function relativeScale = computeRelativeScale(vSet, viewId, cameraParams)
+function relativeScale = computeRelativeScale(vSet, viewId, cameraParams, errorThreshold)
 % Compute the relative scale as the median of all the scale computed between two
 % point pairs.
 % This function uses the view informations from the last three views.
@@ -49,8 +49,8 @@ function relativeScale = computeRelativeScale(vSet, viewId, cameraParams)
 	camMatrix3 = cameraMatrix(cameraParams, camPoses.Orientation{3}, ...
 		camPoses.Location{3});
 	
-	prevWorldPoints = triangulate(points1, points2, camMatrix1, camMatrix2);
-	currWorldPoints = triangulate(points2, points3, camMatrix2, camMatrix3);
+	[prevWorldPoints, prevReprojectionErrors] = triangulate(points1, points2, camMatrix1, camMatrix2);
+	[currWorldPoints, currReprojectionErrors] = triangulate(points2, points3, camMatrix2, camMatrix3);
 	
 	indexes = 1:size(prevWorldPoints, 1);
 	
@@ -61,7 +61,16 @@ function relativeScale = computeRelativeScale(vSet, viewId, cameraParams)
 	l = size(indexPairs, 1);
 	scaleEstimation = zeros(l, 1);
 	
+	numberOfEstimation = 0;
 	for i = 1:l
+		if prevReprojectionErrors(indexPairs(i, 1)) > errorThreshold || ...
+				prevReprojectionErrors(indexPairs(i, 2)) > errorThreshold ||...
+				currReprojectionErrors(indexPairs(i, 1)) > errorThreshold ||...
+				currReprojectionErrors(indexPairs(i, 2)) > errorThreshold
+			continue;
+		end
+		
+		numberOfEstimation = numberOfEstimation + 1;
 		num = sqrt(...
 			sum(...
 			(prevWorldPoints(indexPairs(i, 1)) - ...
@@ -74,8 +83,10 @@ function relativeScale = computeRelativeScale(vSet, viewId, cameraParams)
 			currWorldPoints(indexPairs(i, 2))).^2) ...
 			);
 		
-		scaleEstimation(i) = num/den;
+		scaleEstimation(numberOfEstimation) = num/den;
 	end
 	
+	scaleEstimation = scaleEstimation(1:numberOfEstimation);
 	relativeScale = median(scaleEstimation);
+% 	relativeScale = mean(scaleEstimation);
 end

@@ -2,7 +2,7 @@
 clear variables;
 addpath('utils/');
 % imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll2.png', 'll3.png', 'll4.png', 'll5.png', 'll6.png'});
-imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll4.png'});
+imageDir = fullfile('images', 'sfm_test', 'test2', {'ll0.png', 'll1.png', 'll2.png', 'll3.png'});
 	
 imds = imageDatastore(imageDir);
 
@@ -24,7 +24,7 @@ end
 
 % projecting parameters
 [height, width] = size(images{1});
-dim = min(height, width);
+dim = 540;
 f = 1;
 u0 = dim/2;
 v0 = u0;
@@ -32,7 +32,7 @@ K = [
 	f,	0,	u0;
 	0,	f,	v0;
 	0,	0,	1;];
-cameraParams = cameraParameters('IntrinsicMatrix', K');
+cameraParams = cameraParameters('IntrinsicMatrix', K', 'ImageSize', [dim, dim]);
 
 %% Processing first image
 % Load first image
@@ -115,7 +115,7 @@ for i = 2:numel(images)
         'Location', location);
 	% From the third image on, compute the relative scale
 	if i > 2
-		relativeScale = computeRelativeScale(vSet, i, cameraParams);
+		relativeScale = computeRelativeScale(vSet, i, cameraParams, 5);
 		location = prevLocation + relativeScale*relativeLoc*prevOrientation;
 		vSet = updateView(vSet, i, 'Location', location);
 	end
@@ -129,17 +129,19 @@ for i = 2:numel(images)
 	% Triangulate initial locations for the 3-D world points.
     [xyzPoints, reprojectionErrors] = triangulateMultiview(tracks, camPoses, cameraParams);
 	
-% 	% Triangulate points
-% 	prevCamMatrix = cameraMatrix(cameraParams, prevOrientation, prevLocation);
-% 	currCamMatrix = cameraMatrix(cameraParams, orientation, location);
+	% Triangulate points
+% 	[R, t] = cameraPoseToExtrinsics(prevOrientation, prevLocation);
+% 	prevCamMatrix = cameraMatrix(cameraParams, R, t);
+% 	[R, t] = cameraPoseToExtrinsics(orientation, location);
+% 	currCamMatrix = cameraMatrix(cameraParams, R, t);
 % 	% I don't select the inlier matched points only. I should try that too, though
-% 	[currWorldPoints, currReprojectionErrors] = triangulate(projectedMatches1, ...
+% 	[xyzPoints, reprojectionErrors] = triangulate(projectedMatches1, ...
 % 		projectedMatches2, prevCamMatrix, currCamMatrix);
 
     % Refine the 3-D world points and camera poses.
-%     [xyzPoints, camPoses, reprojectionErrors] = bundleAdjustment(xyzPoints, ...
-%         tracks, camPoses, cameraParams, 'FixedViewId', 1, ...
-%         'PointsUndistorted', true);
+    [xyzPoints, camPoses, reprojectionErrors] = bundleAdjustment(xyzPoints, ...
+        tracks, camPoses, cameraParams, 'FixedViewId', 1, ...
+        'PointsUndistorted', true);
 
     % Store the refined camera poses.
     vSet = updateView(vSet, camPoses);
@@ -171,9 +173,9 @@ hold off
 
 % Specify the viewing volume.
 loc1 = camPoses.Location{1};
-xlim([loc1(1)-5, loc1(1)+4]);
+xlim([loc1(1)-10, loc1(1)+10]);
 ylim([loc1(2)-5, loc1(2)+4]);
-zlim([loc1(3)-1, loc1(3)+4]);
+zlim([loc1(3)-4, loc1(3)+8]);
 camorbit(0, -30);
 
 title('Refined Camera Poses');
