@@ -65,65 +65,8 @@ vSet = addView(vSet, viewId, 'Points', SURFPoints(prevPointsConversion),'Orienta
     eye(3, 'like', prevPoints.Location), 'Location', ...
     zeros(1, 3, 'like', prevPoints.Location));
 
-%% Processing second image
-% load second image
-I = images{2};
-
-viewId = 2;
-
-% Detect, extract and match features.
-currPoints = detectSURFFeatures(I);
-
-[currPointsConversion, currLLIndexes] = createPointsConversionTable(...
-	currPoints, width, height, dim);
-% Remove all points that does not fit in the front projection image
-currPoints = currPoints(currLLIndexes, :);
-
-currFeatures = extractFeatures(I, currPoints);
-
-indexPairs = matchFeatures(prevFeatures, currFeatures, ...
-	'MaxRatio', .7, 'Unique', true);
-
-% Select matched points.
-projectedMatches1 = SURFPoints(prevPointsConversion(indexPairs(:, 1), :));
-projectedMatches2 = SURFPoints(currPointsConversion(indexPairs(:, 2), :));
-
-% Estimate the camera pose of current view relative to the previous view.
-% The pose is computed up to scale, meaning that the distance between
-% the cameras in the previous view and the current view is set to 1.
-% This will be corrected by the bundle adjustment.
-[relativeOrient, relativeLoc, inlierIdx] = helperEstimateRelativePose(...
-	projectedMatches1, projectedMatches2, cameraParams);
-
-% prevCamMatrix = cameraMatrix(cameraParams, eye(3), [0, 0, 0]);
-% currCamMatrix = cameraMatrix(cameraParams, relativeOrient, relativeLoc);
-% prevWorldPoints = triangulate(projectedMatches1, projectedMatches2, prevCamMatrix, currCamMatrix);
-
-% Add the current view to the view set.
-vSet = addView(vSet, viewId, 'Points', SURFPoints(currPointsConversion));
-
-% Store the point matches between the previous and the current views.
-vSet = addConnection(vSet, 1, 2, 'Matches', indexPairs(inlierIdx,:));
-
-% Get the table containing the previous camera pose.
-prevPose = poses(vSet, 1);
-prevOrientation = prevPose.Orientation{1};
-prevLocation    = prevPose.Location{1};
-
-% Compute the current camera pose in the global coordinate system
-% relative to the first view.
-orientation = relativeOrient * prevOrientation;
-location    = prevLocation + relativeLoc * prevOrientation;
-vSet = updateView(vSet, viewId, 'Orientation', orientation, ...
-	'Location', location);
-
-% updating variables before next iteration
-prevPoints = currPoints;
-prevPointsConversion = currPointsConversion;
-prevFeatures = currFeatures;
-
 %% Processing all the other images
-for i = 3:numel(images)
+for i = 2:numel(images)
     % Undistort the current image.
     I = images{i};
 
@@ -168,8 +111,14 @@ for i = 3:numel(images)
     % relative to the first view.
     orientation = relativeOrient * prevOrientation;
     location    = prevLocation + relativeLoc * prevOrientation;
-    vSet = updateView(vSet, i, 'Orientation', orientation, ...
+	vSet = updateView(vSet, i, 'Orientation', orientation, ...
         'Location', location);
+	% From the third image on, compute the relative scale
+	if i > 2
+		relativeScale = computeRelativeScale(vSet, i, cameraParams);
+		location = prevLocation + relativeScale*relativeLoc*prevOrientation;
+		vSet = updateView(vSet, i, 'Location', location);
+	end
 
     % Find point tracks across all views.
     tracks = findTracks(vSet);
@@ -177,13 +126,20 @@ for i = 3:numel(images)
     % Get the table containing camera poses for all views.
     camPoses = poses(vSet);
 
-    % Triangulate initial locations for the 3-D world points.
-    xyzPoints = triangulateMultiview(tracks, camPoses, cameraParams);
+	% Triangulate initial locations for the 3-D world points.
+    [xyzPoints, reprojectionErrors] = triangulateMultiview(tracks, camPoses, cameraParams);
+	
+% 	% Triangulate points
+% 	prevCamMatrix = cameraMatrix(cameraParams, prevOrientation, prevLocation);
+% 	currCamMatrix = cameraMatrix(cameraParams, orientation, location);
+% 	% I don't select the inlier matched points only. I should try that too, though
+% 	[currWorldPoints, currReprojectionErrors] = triangulate(projectedMatches1, ...
+% 		projectedMatches2, prevCamMatrix, currCamMatrix);
 
     % Refine the 3-D world points and camera poses.
-    [xyzPoints, camPoses, reprojectionErrors] = bundleAdjustment(xyzPoints, ...
-        tracks, camPoses, cameraParams, 'FixedViewId', 1, ...
-        'PointsUndistorted', true);
+%     [xyzPoints, camPoses, reprojectionErrors] = bundleAdjustment(xyzPoints, ...
+%         tracks, camPoses, cameraParams, 'FixedViewId', 1, ...
+%         'PointsUndistorted', true);
 
     % Store the refined camera poses.
     vSet = updateView(vSet, camPoses);
@@ -217,7 +173,7 @@ hold off
 loc1 = camPoses.Location{1};
 xlim([loc1(1)-5, loc1(1)+4]);
 ylim([loc1(2)-5, loc1(2)+4]);
-zlim([loc1(3)-1, loc1(3)+20]);
+zlim([loc1(3)-1, loc1(3)+4]);
 camorbit(0, -30);
 
 title('Refined Camera Poses');

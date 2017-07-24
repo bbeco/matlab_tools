@@ -23,9 +23,24 @@ function relativeScale = computeRelativeScale(vSet, viewId, cameraParams)
 	camPoses = poses(vSet, vIds);
 	tracks = findTracks(vSet, vIds);
 	
-	points1 = tracks(1).Points;
-	points2 = tracks(2).Points;
-	points3 = tracks(3).Points;
+	% Selecting all the points that are visible in every views whose Ids are in
+	% the vIds array
+	matchNumber = 0;
+	l = size(tracks, 2);
+	points1 = zeros(l, 2, 'like', tracks(1, 1).Points(1, :));
+	points2 = zeros(size(points1), 'like', points1);
+	points3 = zeros(size(points1), 'like', points1);
+	for i = 1:size(tracks, 2)
+		if isequal(tracks(i).ViewIds, vIds)
+			matchNumber = matchNumber + 1;
+			points1(matchNumber, :) = tracks(i).Points(1, :);
+			points2(matchNumber, :) = tracks(i).Points(2, :);
+			points3(matchNumber, :) = tracks(i).Points(3, :);
+		end
+	end
+	points1 = points1(1:matchNumber, :);
+	points2 = points2(1:matchNumber, :);
+	points3 = points3(1:matchNumber, :);
 	
 	camMatrix1 = cameraMatrix(cameraParams, camPoses.Orientation{1}, ...
 		camPoses.Location{1});
@@ -41,7 +56,7 @@ function relativeScale = computeRelativeScale(vSet, viewId, cameraParams)
 	
 	% This creates all the possible combination of the indexes used for the
 	% scale estimation.
-	indexPairs = nchoosek(index, 2);
+	indexPairs = nchoosek(indexes, 2);
 	
 	l = size(indexPairs, 1);
 	scaleEstimation = zeros(l, 1);
