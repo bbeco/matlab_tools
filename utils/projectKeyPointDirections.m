@@ -1,6 +1,5 @@
-function [pointsConversion, pointIndexes] = createPointsConversionTable(points, width, height, dim)
-% Questa funzione deve implementare la trasformazione delle coordinate cosi'
-% come diceva corsini.
+function [pointsConversion, pointIndexes] = projectKeyPointDirections(points, width, height, dim)
+%
 %	Input:
 %		-
 %

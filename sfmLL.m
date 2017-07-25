@@ -1,8 +1,22 @@
 %% Init
 clear variables;
 addpath('utils/');
-% imageDir = fullfile('images', 'essential_matrix_test', {'ll0.png', 'll1.png', 'll2.png', 'll3.png', 'll4.png', 'll5.png', 'll6.png'});
-imageDir = fullfile('images', 'sfm_test', 'test2', {'ll0.png', 'll1.png', 'll2.png', 'll3.png'});
+% imageDir = fullfile('images', 'sfm_test', 'test2', {'ll0.png', 'll1.png', 'll2.png', 'll3.png', 'll4.png'});
+imageDir = fullfile('/', 'home', 'andrea', 'synthetic_scene4', '*.png');
+
+% ********** PARAMETERS ************
+computeRelativeScaleBeforeBundleAdjustment = false;
+maxAcceptedReprojectionError = 5;
+
+projectExtractedKeyPointDirections = true;
+dim = 270;
+f = 1;
+
+prefilterLLKeyPoints = false;
+maxLatitudeAngle = 60; %degrees
+
+performBundleAdjustment = true;
+% **********************************
 	
 imds = imageDatastore(imageDir);
 
@@ -24,8 +38,6 @@ end
 
 % projecting parameters
 [height, width] = size(images{1});
-dim = 540;
-f = 1;
 u0 = dim/2;
 v0 = u0;
 K = [
@@ -40,8 +52,19 @@ I = images{1};
 
 prevPoints = detectSURFFeatures(I);
 
-[prevPointsConversion, prevLLIndexes] = createPointsConversionTable(...
-	prevPoints, width, height, dim);
+if prefilterLLKeyPoints
+	indexes = filterLLPoints(prevPoints, maxLatitudeAngle, width, height);
+	prevPoints = prevPoints(indexes, :);
+end
+
+if projectExtractedKeyPointDirections
+	[prevPointsConversion, prevLLIndexes] = projectKeyPointDirections(...
+		prevPoints, width, height, dim);
+else
+	[prevPointsConversion, prevLLIndexes] = createPointsConversionTable(...
+		prevPoints, width, height, dim);
+end
+
 % remove all points that do not fit in image plane or that do not belong to the 
 % front projection.
 prevPoints = prevPoints(prevLLIndexes, :);
@@ -73,8 +96,19 @@ for i = 2:numel(images)
     % Detect, extract and match features.
     currPoints = detectSURFFeatures(I);
 	
-	[currPointsConversion, currLLIndexes] = createPointsConversionTable(...
-		currPoints, width, height, dim);
+	if prefilterLLKeyPoints
+		indexes = filterLLPoints(currPoints, maxLatitudeAngle, width, height);
+		currPoints = prevPoints(indexes, :);
+	end
+	
+	if projectExtractedKeyPointDirections
+		[currPointsConversion, currLLIndexes] = ProjectKeyPointDirections(...
+			currPoints, width, height, dim);
+	else
+		[currPointsConversion, currLLIndexes] = createPointsConversionTable(...
+			currPoints, width, height, dim);
+	end
+	
 	% Remove all points that does not fit in the front projection image
 	currPoints = currPoints(currLLIndexes, :);
 	if length(currPoints) < 8
@@ -114,8 +148,8 @@ for i = 2:numel(images)
 	vSet = updateView(vSet, i, 'Orientation', orientation, ...
         'Location', location);
 	% From the third image on, compute the relative scale
-	if i > 2
-		relativeScale = computeRelativeScale(vSet, i, cameraParams, 5);
+	if i > 2 && computeRelativeScaleBeforeBundleAdjustment
+		relativeScale = computeRelativeScale(vSet, i, cameraParams, maxAcceptedReprojectionError);
 		location = prevLocation + relativeScale*relativeLoc*prevOrientation;
 		vSet = updateView(vSet, i, 'Location', location);
 	end
@@ -139,9 +173,11 @@ for i = 2:numel(images)
 % 		projectedMatches2, prevCamMatrix, currCamMatrix);
 
     % Refine the 3-D world points and camera poses.
-    [xyzPoints, camPoses, reprojectionErrors] = bundleAdjustment(xyzPoints, ...
-        tracks, camPoses, cameraParams, 'FixedViewId', 1, ...
-        'PointsUndistorted', true);
+	if performBundleAdjustment
+		[xyzPoints, camPoses, reprojectionErrors] = bundleAdjustment(xyzPoints, ...
+			tracks, camPoses, cameraParams, 'FixedViewId', 1, ...
+			'PointsUndistorted', true);
+	end
 
     % Store the refined camera poses.
     vSet = updateView(vSet, camPoses);
@@ -179,3 +215,10 @@ zlim([loc1(3)-4, loc1(3)+8]);
 camorbit(0, -30);
 
 title('Refined Camera Poses');
+
+% printing location and orientation result for each view
+for i = 1:vSet.NumViews
+	disp(['View ', num2str(i)]);
+	vSet.Views.Location{i}
+	vSet.Views.Orientation{i}
+end
