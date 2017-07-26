@@ -37,12 +37,12 @@ function validIndex = filterLLPoints(points, maxLatitudeAngle, width, height)
 	for i = 1:l
 		[lat, ~] = extractLLCoordinateFromImage(points.Location(i, 1), ...
 			points.Location(i, 2), width, height);
-		if lat*180/pi > maxLatitudeAngle
+		if lat*180/pi > maxLatitudeAngle || lat*180/pi < -maxLatitudeAngle
 			continue;
 		end
 		
 		indexesNumber = indexesNumber + 1;
 		validIndex(indexesNumber) = i;
 	end
-	validIndex = validIndes(1:indexesNumber);
+	validIndex = validIndex(1:indexesNumber);
 end

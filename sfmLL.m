@@ -7,7 +7,7 @@ imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
 load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
 
 % ********** PARAMETERS ************
-computeRelativeScaleBeforeBundleAdjustment = false;
+computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 5;
 
 % filter those matches whose points have similar coordinates
@@ -18,10 +18,10 @@ projectExtractedKeyPointDirections = true;
 dim = 270;
 f = 1;
 
-prefilterLLKeyPoints = false;
+prefilterLLKeyPoints = true;
 maxLatitudeAngle = 60; %degrees
 
-performBundleAdjustment = false;
+performBundleAdjustment = true;
 % **********************************
 	
 imds = imageDatastore(imageDir);
@@ -104,7 +104,7 @@ for i = 2:numel(images)
 	
 	if prefilterLLKeyPoints
 		indexes = filterLLPoints(currPoints, maxLatitudeAngle, width, height);
-		currPoints = prevPoints(indexes, :);
+		currPoints = currPoints(indexes, :);
 	end
 	
 	if projectExtractedKeyPointDirections
