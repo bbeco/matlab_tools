@@ -1,12 +1,18 @@
 %% Init
 clear variables;
 addpath('utils/');
+addpath('filters/');
 % imageDir = fullfile('images', 'sfm_test', 'test2', {'ll0.png', 'll1.png', 'll2.png', 'll3.png', 'll4.png'});
-imageDir = fullfile('/', 'home', 'andrea', 'synthetic_scene4', '*.png');
+imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
+load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
 
 % ********** PARAMETERS ************
 computeRelativeScaleBeforeBundleAdjustment = false;
 maxAcceptedReprojectionError = 5;
+
+% filter those matches whose points have similar coordinates
+filterMatches = true;
+angularThreshold = 2; %degrees
 
 projectExtractedKeyPointDirections = true;
 dim = 270;
@@ -15,7 +21,7 @@ f = 1;
 prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
 
-performBundleAdjustment = true;
+performBundleAdjustment = false;
 % **********************************
 	
 imds = imageDatastore(imageDir);
@@ -84,8 +90,8 @@ vSet = viewSet;
 % and the origin, oriented along the Z-axis.
 viewId = 1;
 
-vSet = addView(vSet, viewId, 'Points', SURFPoints(prevPointsConversion),'Orientation', ...
-    eye(3, 'like', prevPoints.Location), 'Location', ...
+vSet = addView(vSet, viewId, 'Points', SURFPoints(prevPointsConversion),...
+	'Orientation', eye(3, 'like', prevPoints.Location), 'Location', ...
     zeros(1, 3, 'like', prevPoints.Location));
 
 %% Processing all the other images
@@ -102,7 +108,7 @@ for i = 2:numel(images)
 	end
 	
 	if projectExtractedKeyPointDirections
-		[currPointsConversion, currLLIndexes] = ProjectKeyPointDirections(...
+		[currPointsConversion, currLLIndexes] = projectKeyPointDirections(...
 			currPoints, width, height, dim);
 	else
 		[currPointsConversion, currLLIndexes] = createPointsConversionTable(...
@@ -118,6 +124,12 @@ for i = 2:numel(images)
     currFeatures = extractFeatures(I, currPoints);
     indexPairs = matchFeatures(prevFeatures, currFeatures, ...
         'MaxRatio', .7, 'Unique',  true);
+	
+	if filterMatches
+		validIndexes = filterLLMatches(prevPoints, currPoints, ...
+			indexPairs, angularThreshold, width, height);
+		indexPairs = indexPairs(validIndexes, :);
+	end
 
     % Select matched points.
     projectedMatches1 = SURFPoints(prevPointsConversion(indexPairs(:, 1), :));
@@ -216,9 +228,21 @@ camorbit(0, -30);
 
 title('Refined Camera Poses');
 
-% printing location and orientation result for each view
+%% printing location and orientation result for each view
+% computing the absolute scale accorging to ground truth
+realDistance = sqrt(sum(groundTruthPoses.Location{2} - groundTruthPoses.Location{1}).^2);
+firstPose = poses(vSet, 1);
+secondPose = poses(vSet, 2);
+estimatedDistance = sqrt(sum(secondPose.Location{1} - firstPose.Location{1}).^2);
+absoluteScale = realDistance/estimatedDistance;
 for i = 1:vSet.NumViews
 	disp(['View ', num2str(i)]);
-	vSet.Views.Location{i}
-	vSet.Views.Orientation{i}
+	disp('Location Error');
+	locationError = sqrt(sum(absoluteScale*vSet.Views.Location{i} - ...
+		groundTruthPoses.Location{i}).^2);
+	disp(locationError);
+	disp('Orientation Error');
+	orientationError = groundTruthPoses.Orientation{i} - ...
+		180/pi*rotm2eul(vSet.Views.Orientation{i});
+	disp(orientationError);
 end

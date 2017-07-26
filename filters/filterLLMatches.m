@@ -38,9 +38,9 @@ function validIndexes = filterLLMatches(points1, points2, indexPairs, angularThr
 	
 	for i = 1:l
 		[lat1, long1] = extractLLCoordinateFromImage(...
-			points1(i, 1), points1(i,2), width, height);
+			points1.Location(i, 1), points1.Location(i,2), width, height);
 		[lat2, long2] = extractLLCoordinateFromImage(...
-			points2(i, 1), points2(i, 2), width, height);
+			points2.Location(i, 1), points2.Location(i, 2), width, height);
 		lat1 = conversionFactor*lat1;
 		long1 = conversionFactor*long1;
 		lat2 = conversionFactor*lat2;
