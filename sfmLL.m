@@ -104,7 +104,7 @@ for i = 2:numel(images)
 	
 	if prefilterLLKeyPoints
 		indexes = filterLLPoints(currPoints, maxLatitudeAngle, width, height);
-		currPoints = prevPoints(indexes, :);
+		currPoints = currPoints(indexes, :);
 	end
 	
 	if projectExtractedKeyPointDirections
