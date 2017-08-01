@@ -10,7 +10,6 @@ function [pointsConversion, pointIndexes] = projectKeyPointDirections(points, wi
 %		-pointIndexes: the indexes of image points that did not fall outside
 %		image plane;
 %
-	addpath(fullfile('coordinate_transform'));
 	l = size(points, 1);
 
 	pointsConversion = zeros(l, 2, 'like', points.Location(1, 1));
