@@ -10,14 +10,15 @@ def retrieveCameraList():
 
 def printAll():
 	cameraList = retrieveCameraList()
-	print('% Locations')
+	print('% Location\nLocation = {')
 	for c in cameraList:
 		print('% ' + c.name)
 		c.printLocation()
-	print('% Orientations')
+	print('};\n% Orientation\nOrientation = {')
 	for c in cameraList:
 		print('% ' + c.name)
 		c.printOrientation()
+	print('};')
 
 class CameraPose:
 	def _rotationMatrixToStr(mat):
@@ -26,15 +27,12 @@ class CameraPose:
 			for j in range(0, 3):
 				s = s + ' ' + str(mat[i][j])
 			if i != 2:
-				s = s + ';'
+				s = s + ';\n'
 		s = s + ' ]'
 		return s
 
 	def _locationToStr(loc):
-		s = '['
-		for i in range(0, 3):
-			s = s + ' ' + str(loc[i])
-		s = s + ']'
+		s = '[ ' + str(loc[0]) + ' ' + str(-loc[2]) + ' ' + str(loc[1]) + ' ]'
 		return s
 
 	def __init__(self, cameraObj):
@@ -54,8 +52,8 @@ class CameraPose:
 		rot = mathutils.Matrix().to_3x3()
 		rot.identity()
 		mat1 = mathutils.Matrix.Rotation(self.rotation[0], 4, 'X').to_3x3()
-		mat2 = mathutils.Matrix.Rotation(self.rotation[1], 4, 'Z').to_3x3()
-		mat3 = mathutils.Matrix.Rotation(-self.rotation[2], 4, 'Y').to_3x3()
+		mat2 = mathutils.Matrix.Rotation(self.rotation[1], 4, 'Y').to_3x3()
+		mat3 = mathutils.Matrix.Rotation(-self.rotation[2], 4, 'Z').to_3x3()
 		rot = mat3 * mat2 * mat1
 		# rot is a rotation matrix in the premultiply form. Matlab ViewSet uses 
 		# post multiplication form for the orientation matrixes, so rot has to 
