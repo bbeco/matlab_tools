@@ -1,0 +1,10 @@
+addpath(fullfile('..');
+vSet = ViewSet;
+vWindow = ViewWindow(4);
+f1 = rand(1, 64);
+f2 = rand(1, 64);
+addPoints(vWindow, 1, [1 1], f1, [1 1]);
+addPoints(vWindow, 2, [2 2], f1, [2 2]);
+addPoints(vWindow, 3, [3 3], f1, [3 3]);
+addPoints(vWindow, 4, [4 4], f1, [4 4]);
+computeTrackAndCreateConnections(vSet, vWindow, [1, 1]);
