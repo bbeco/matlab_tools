@@ -20,35 +20,42 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewsPairs)
 %	You should have received a copy of the GNU Lesser General Public License
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	correspondences = table(1, vWindow.WindowSize - 1);
-	matches = table(1, vWindowSize - 1);
+	correspondences = cell(1, vWindow.WindowSize - 1);
+	matches = cell(1, vWindow.WindowSize - 1);
 	matchesCounter = 0;
-	correspondences(1, 1) = lastViewsPairs(:, [2, 1]);
+	correspondences{1, 1} = lastViewsPairs(:, [2, 1]);
 	
-	features1 = vWindow.Views.Features{1}
-	for i = 3:vWindowSize
+	features1 = vWindow.Views.Features{1};
+	for i = 3:vWindow.WindowSize
 		features2 = vWindow.Views.Features{i};
 		indexPairs = matchFeatures(features1, features2);
-		correspondences(1, i - 1) = indexPairs;
+		correspondences{1, i - 1} = indexPairs;
 	end
 
 	v = zeros(1, vWindow.WindowSize - 1);
-	viewsCounter = 1;
-	for i = 1:height(lastViewsPairs)
-		index = correspondences(1, 1);
-		[~, ~, ib] = intersect(lastViewsPairs(i, 1), index(:, 2));
-		v(1) = ib;
-		viewsCounter = 2;
-		while ~isempty(ib) && viewsCounter < vWindowSize
-			index = correspondences(1, viewsCounter);
-			[~, ~, ib] = intersect(lastViewPairs(i, 1), index(:, 2));
-			v(viewsCounter) = ib;
-			viewsCounter = viewsCounter + 1;
+    viewsCounter = 1;
+	for i = 1:size(lastViewsPairs, 1)
+        % the following while and previous initializations have to be 
+        % checked again for further simplification
+		index = correspondences{1, 1};
+		[~, ~, ib] = intersect(correspondences{1, 1}(i, 1), index(:, 1));
+        if ~isempty(ib)
+            v(1) = ib;
+            viewsCounter = 2;
+        end
+		while ~isempty(ib) && viewsCounter < vWindow.WindowSize
+			index = correspondences{1, viewsCounter};
+			[~, ~, ib] = intersect(correspondences{1, 1}(i, 1), index(:, 1));
+            if ~isempty(ib)
+                v(viewsCounter) = ib;
+                viewsCounter = viewsCounter + 1;
+            end
 		end
-		if viewsCounter >= vWindowSize
+		if viewsCounter >= vWindow.WindowSize
 			for j = 1:length(v)
 				matchesCounter = matchesCounter + 1;
-				matches(matchesCounter, j) = v(j);
+                %maybe a table is more suitable for the matches' purpose
+				matches{matchesCounter, j} = correspondences{1, j}(v(j), :);
 			end
 		else
 			continue;
@@ -56,8 +63,9 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewsPairs)
 	end
 		
 	% Adding matches between views
-	for i = 2:vWindowSize
-		vSet = addConnection(vSet, 1, i, 'Matches', matches(i));
+    lastViewId = vSet.NumViews;
+	for i = 1:vWindow.WindowSize - 1
+		vSet = addConnection(vSet, lastViewId, lastViewId - i, 'Matches', cat(1, matches{:, i}));
 	end
 	
 end

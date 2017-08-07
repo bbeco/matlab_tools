@@ -7,7 +7,7 @@ classdef ViewWindow < handle
 		NumViews
 	end
 	methods
-		function obj=ExtendedViewSet(num)
+		function obj=ViewWindow(num)
 			obj.Views = table;
 			obj.WindowSize = num;
 			obj.NumViews = 0;
