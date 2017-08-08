@@ -23,6 +23,15 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewsPairs)
 	correspondences = cell(1, vWindow.WindowSize - 1);
 	matches = cell(1, vWindow.WindowSize - 1);
 	matchesCounter = 0;
+    
+    if isempty(lastViewsPairs)
+        % No matches in the last 2 views. There cannot be any longer
+        % matches
+        return;
+    end
+    
+    % Swap the matching columns so that the indexes in the first column 
+    % always refer to the points in the most recent view (last view)
 	correspondences{1, 1} = lastViewsPairs(:, [2, 1]);
 	
 	features1 = vWindow.Views.Features{1};
@@ -33,35 +42,37 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewsPairs)
 	end
 
 	v = zeros(1, vWindow.WindowSize - 1);
-    viewsCounter = 1;
 	for i = 1:size(lastViewsPairs, 1)
-        % the following while and previous initializations have to be 
-        % checked again for further simplification
-		index = correspondences{1, 1};
-		[~, ~, ib] = intersect(correspondences{1, 1}(i, 1), index(:, 1));
-        if ~isempty(ib)
-            v(1) = ib;
-            viewsCounter = 2;
-        end
-		while ~isempty(ib) && viewsCounter < vWindow.WindowSize
+        % try to track a keypoints in every view belonging to window.
+		% If the key points is found in every vieww, it is added to the tracks 
+		% and several connections are added (as many as the number of views in
+		% the window)
+		viewsCounter = 1;
+		while viewsCounter < vWindow.WindowSize
 			index = correspondences{1, viewsCounter};
 			[~, ~, ib] = intersect(correspondences{1, 1}(i, 1), index(:, 1));
             if ~isempty(ib)
                 v(viewsCounter) = ib;
                 viewsCounter = viewsCounter + 1;
+			else
+				break;
             end
 		end
 		if viewsCounter >= vWindow.WindowSize
 			for j = 1:length(v)
 				matchesCounter = matchesCounter + 1;
-                %maybe a table is more suitable for the matches' purpose
+                % maybe a table is more suitable for the matches' purpose
 				matches{matchesCounter, j} = correspondences{1, j}(v(j), :);
 			end
 		else
 			continue;
 		end
 	end
-		
+	
+    if matchesCounter < 1
+        return;
+    end
+    
 	% Adding matches between views
     lastViewId = vSet.NumViews;
 	for i = 1:vWindow.WindowSize - 1
