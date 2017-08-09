@@ -2,7 +2,7 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		sfmLL_function(imageDir, ...
 		computeRelativeScaleBeforeBundleAdjustment, maxAcceptedReprojectionError, ...
 		filterMatches, angularThreshold, ...
-		projectExtractedKeyPointDirections, dim, f, ...
+		projectExtractedKeyPointDirections, dim, f, zMin, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, performBundleAdjustment, ...
 		viewsWindowSize)
 	imds = imageDatastore(imageDir);
@@ -25,13 +25,18 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 
 	% projecting parameters
 	[height, width] = size(images{1});
-	u0 = dim/2;
-	v0 = u0;
-	K = [
-		f,	0,	u0;
-		0,	f,	v0;
-		0,	0,	1;];
-	cameraParams = cameraParameters('IntrinsicMatrix', K', 'ImageSize', [dim, dim]);
+	if projectExtractedKeyPointDirections
+		u0 = dim/2;
+		v0 = u0;
+		K = [
+			f,	0,	u0;
+			0,	f,	v0;
+			0,	0,	1;];
+		cameraParams = cameraParameters('IntrinsicMatrix', K', ...
+			'ImageSize', [dim, dim]);
+	else
+		cameraParams = cameraParameters('IntrinsicMatrix', [1, 0, 1; 0 1 1; 0 0 1]');
+	end
 
 	vWindow = ViewWindow(viewsWindowSize);
 	
@@ -50,8 +55,8 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		[prevPointsConversion, prevLLIndexes] = projectKeyPointDirections(...
 			prevPoints, width, height, dim);
 	else
-		[prevPointsConversion, prevLLIndexes] = createPointsConversionTable(...
-			prevPoints, width, height, dim);
+		[prevPointsConversion, prevLLIndexes, prevFrontIndex] = ...
+			createPointsConversionTable(prevPoints, zMin, width, height);
 	end
 
 	% remove all points that do not fit in image plane or that do not belong to the 
@@ -72,12 +77,23 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 	% Add the first view. Place the camera associated with the first view
 	% and the origin, oriented along the Z-axis.
 	viewId = 1;
-
-	vSet = addView(vSet, viewId, 'Points', SURFPoints(prevPointsConversion),...
-		'Orientation', eye(3, 'like', prevPoints.Location), 'Location', ...
-		zeros(1, 3, 'like', prevPoints.Location));
 	
-	addPoints(vWindow, 1, prevPoints, prevFeatures, prevPointsConversion);
+	if ~projectExtractedKeyPointDirections
+		vSet = addView(vSet, viewId, 'Points', ...
+			prevPointsConversion(prevFrontIndex, :),...
+			'Orientation', eye(3, 'like', prevPoints.Location), 'Location', ...
+			zeros(1, 3, 'like', prevPoints.Location));
+		
+		addPoints(vWindow, 1, prevPoints(prevFrontIndex, :), ...
+			prevFeatures(prevFrontIndex), ...
+			prevPointsConversion(prevFrontIndex, :));
+	else
+		vSet = addView(vSet, viewId, 'Points', prevPointsConversion,...
+			'Orientation', eye(3, 'like', prevPoints.Location), 'Location', ...
+			zeros(1, 3, 'like', prevPoints.Location));
+		
+		addPoints(vWindow, 1, prevPoints, prevFeatures, prevPointsConversion);
+	end
 
 	%% Processing all the other images
 	for i = 2:numel(images)
@@ -96,8 +112,8 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 			[currPointsConversion, currLLIndexes] = projectKeyPointDirections(...
 				currPoints, width, height, dim);
 		else
-			[currPointsConversion, currLLIndexes] = createPointsConversionTable(...
-				currPoints, width, height, dim);
+			[currPointsConversion, currLLIndexes, currFrontIndex] = ...
+				createPointsConversionTable(currPoints, zMin, width, height);
 		end
 
 		% Remove all points that does not fit in the front projection image
@@ -117,20 +133,36 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		end
 
 		% Select matched points.
-		projectedMatches1 = SURFPoints(prevPointsConversion(indexPairs(:, 1), :));
-		projectedMatches2 = SURFPoints(currPointsConversion(indexPairs(:, 2), :));
+		projectedMatches1 = prevPointsConversion(indexPairs(:, 1), :);
+		projectedMatches2 = currPointsConversion(indexPairs(:, 2), :);
 
 		% Estimate the camera pose of current view relative to the previous view.
 		% The pose is computed up to scale, meaning that the distance between
 		% the cameras in the previous view and the current view is set to 1.
 		% This will be corrected by the bundle adjustment.
-		[relativeOrient, relativeLoc, inlierIdx] = helperEstimateRelativePose(...
-			projectedMatches1, projectedMatches2, cameraParams);
+		if projectExtractedKeyPointDirections
+			[relativeOrient, relativeLoc, inlierIdx] = ...
+				helperEstimateRelativePose(...
+				projectedMatches1, projectedMatches2, cameraParams);
+		else
+			[relativeOrient, relativeLoc, inlierIdx] = estimateRelativePose(...
+				projectedMatches1, projectedMatches2, cameraParams, ...
+				prevFrontIndex(indexPairs(:, 1)), ...
+				currFrontIndex(indexPairs(:, 2)));
+		end
 
 		% Add the current view to the view set.
-		vSet = addView(vSet, i, 'Points', SURFPoints(currPointsConversion));
+		if projectExtractedKeyPointDirections
+			vSet = addView(vSet, i, 'Points', currPointsConversion);
+			addPoints(vWindow, i, currPoints, currFeatures, currPointsConversion);
+		else
+			vSet = addView(vSet, i, 'Points', ...
+				currPointsConversion(currFrontIndex, :));
+			addPoints(vWindow, i, currPoints(currFrontIndex, :), ...
+				currFeatures(currFrontIndex, :), ...
+				currPointsConversion(currFrontIndex, :));
+		end
 		
-		addPoints(vWindow, i, currPoints, currFeatures, currPointsConversion);
 		if i >= viewsWindowSize
 			vSet = computeTrackAndCreateConnections(vSet, vWindow, indexPairs);
 		end
@@ -176,5 +208,8 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		prevFeatures = currFeatures;
 		prevPoints = currPoints;
 		prevPointsConversion = currPointsConversion;
+		if ~projectExtractedKeyPointDirections
+			prevFrontIndex = currFrontIndex;
+		end
 	end
 
