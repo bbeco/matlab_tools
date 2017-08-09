@@ -4,7 +4,7 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		filterMatches, angularThreshold, ...
 		projectExtractedKeyPointDirections, dim, f, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, performBundleAdjustment, ...
-		viewWindowSize)
+		viewsWindowSize)
 	imds = imageDatastore(imageDir);
 
 	% Suppress figure warnings
@@ -33,7 +33,7 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		0,	0,	1;];
 	cameraParams = cameraParameters('IntrinsicMatrix', K', 'ImageSize', [dim, dim]);
 
-	vWindow = ViewWindow(viewWindowSize);
+	vWindow = ViewWindow(viewsWindowSize);
 	
 	%% Processing first image
 	% Load first image
@@ -131,7 +131,9 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		vSet = addView(vSet, i, 'Points', SURFPoints(currPointsConversion));
 		
 		addPoints(vWindow, i, currPoints, currFeatures, currPointsConversion);
-		computeTrackAndCreateConnections(vSet, vWindow, indexPairs);
+		if i >= viewsWindowSize
+			vSet = computeTrackAndCreateConnections(vSet, vWindow, indexPairs);
+		end
 
 		% Get the table containing the previous camera pose.
 		prevPose = poses(vSet, i-1);

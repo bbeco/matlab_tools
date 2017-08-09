@@ -2,14 +2,15 @@ clear VARIABLES;
 addpath('coordinate_transform');
 addpath('utils/');
 addpath('filters/');
-imageDir = fullfile('images', 'sfm_test', 'test6', '*.png');
-load(fullfile('images', 'sfm_test', 'test6', 'groundTruth.mat'));
-filename = '../test6.xlsx';
+imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
+load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
+filename = '../test4.xlsx';
 
 % ********** PARAMETERS ************
-repetitions = 1;
+% whether to plot camera position or not
+enableFigures = false;
+repetitions = 20;
 
-ViewWindowSize = 2;
 computeRelativeScaleBeforeBundleAdjustment = false;
 maxAcceptedReprojectionError = 0.8;
 
@@ -25,6 +26,10 @@ prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
 
 performBundleAdjustment = true;
+
+% This is the number of views for a keypoint to appear into in order for it to
+% be added in a connection's match.
+viewsWindowSize = 2;
 % **********************************
 
 imds = imageDatastore(imageDir);
@@ -37,14 +42,6 @@ errorZ = zeros(repetitions, c);
 distanceGT = zeros(c, 1);
 orientationGT = zeros(c, 3);
 
-params = table(repetitions, computeRelativeScaleBeforeBundleAdjustment, ...
-	maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
-	projectExtractedKeyPointDirections, dim, f,...
-	prefilterLLKeyPoints, maxLatitudeAngle, performBundleAdjustment, ...
-	ViewWindowSize);
-
-writetable(params, filename, 'Range', 'A1');
-
 for i = 1:repetitions
 
 	[vSet, xyzPoints, reprojectionErrors] = ...
@@ -52,13 +49,12 @@ for i = 1:repetitions
 		maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
 		projectExtractedKeyPointDirections, dim, f, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, ...
-		performBundleAdjustment);
+		performBundleAdjustment, viewsWindowSize);
 
 	[vSet, groundTruthPoses] = normalizeViewSet(vSet, groundTruthPoses);
 	camPoses = poses(vSet);
 	location = cat(1, camPoses.Location{:});
 	locationGT = cat(1, groundTruthPoses.Location{:});
-	errorLocation = (sqrt(sum((location - locationGT).^2, 2)))';
 	for j = 1:size(camPoses, 1)
 		location = camPoses.Location{j};
 		locationGT = groundTruthPoses.Location{j};
@@ -67,27 +63,35 @@ for i = 1:repetitions
 		% rotm2eul expects rotation matrixes in premultiply form, we need to 
 		% transpose the orientations before feeding them to rotm2eul.
 		orientation = rotm2eul(camPoses.Orientation{j}');
-		orientationGT = rotm2eul(groundTruthPoses.Orientation{j}');
-		angularErrors = abs(orientation - orientationGT);
+		angularErrors = abs(orientation - ...
+			rotm2eul(groundTruthPoses.Orientation{j}'));
 		errorZ(i, j) = angularErrors(1);
 		errorY(i, j) = angularErrors(2);
 		errorX(i, j) = angularErrors(3);
 	end
 end
 
-%% Write results
-
 % Computing distances
 for j = 2:c
-	distanceGT(j) = distanceGT(j-1) + ...
-		abs(sqrt(sum((groundTruthPoses.Location{j} - groundTruthPoses.Location{j-1}).^2)));
-	orientationGT(j, :) = rotm2eul(groundTruthPoses.Orientation{j}');
+	distanceGT(j) = abs(sqrt(sum((groundTruthPoses.Location{j} - ...
+		groundTruthPoses.Location{j-1}).^2)));
+	orientationGT(j, :) = abs(rotm2eul(groundTruthPoses.Orientation{j}') - ...
+		rotm2eul(groundTruthPoses.Orientation{j - 1}'));
 end
 
 errorX = 180/pi * errorX;
 errorY = 180/pi * errorY;
 errorZ = 180/pi * errorZ;
 orientationGT = 180/pi*orientationGT;
+
+%% Write results
+params = table(repetitions, computeRelativeScaleBeforeBundleAdjustment, ...
+	maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
+	projectExtractedKeyPointDirections, dim, f,...
+	prefilterLLKeyPoints, maxLatitudeAngle, performBundleAdjustment, ...
+	viewsWindowSize);
+
+writetable(params, filename, 'Range', 'A1');
 
 columnNames = ...
 	{'distance', 'OrientationX_deg', 'orientationY_deg', 'OrientationZ_deg'};
@@ -102,40 +106,47 @@ errorLocationTable = table([1:repetitions]', errorLocation, ...
 writetable(errorLocationTable, filename, 'Range', ['A' num2str(4 + c + 3)]);
 errorXtable = table([1:repetitions]', errorX, ...
 	'VariableNames', {'repetitions', 'ErrorX_deg'});
-writetable(errorXtable, filename, 'Range', ['A' num2str(4 + c + 2*repetitions + 2*3)]);
+writetable(errorXtable, filename, 'Range', ['A' num2str(4 + c + 3 + repetitions + 3)]);
 errorYtable = table([1:repetitions]', errorY, ...
 	'VariableNames', {'repetitions', 'ErrorY_deg'});
-writetable(errorYtable, filename, 'Range', ['A' num2str(4 + c + 3*repetitions + 3*3)]);
+writetable(errorYtable, filename, 'Range', ['A' num2str(4 + c + 3 + 2*repetitions + 2*3)]);
 errorZtable = table([1:repetitions]', errorZ, ...
 	'VariableNames', {'repetitions', 'ErrorZ_deg'});
-writetable(errorZtable, filename, 'Range', ['A' num2str(4 + c + 4*repetitions + 4*3)]);
+writetable(errorZtable, filename, 'Range', ['A' num2str(4 + c + 3 + 3*repetitions + 3*3)]);
 
-% Display camera poses.
-camPoses = poses(vSet);
-figure;
-plotCamera(camPoses, 'Size', 0.2);
-hold on
-plotCamera(groundTruthPoses, 'Size', 0.2, 'Color', [0 1 0]);
+if enableFigures
+	% Display camera poses.
+	camPoses = poses(vSet);
+	figure;
+	plotCamera(camPoses, 'Size', 0.2);
+	hold on
+	plotCamera(groundTruthPoses, 'Size', 0.2, 'Color', [0 1 0]);
 
-xlabel('X');
-ylabel('Y');
-zlabel('Z');
+	xlabel('X');
+	ylabel('Y');
+	zlabel('Z');
 
-% Exclude noisy 3-D points.
-goodIdx = (reprojectionErrors < 5);
-xyzPoints = xyzPoints(goodIdx, :);
+	% Exclude noisy 3-D points.
+	goodIdx = (reprojectionErrors < 5);
+	xyzPoints = xyzPoints(goodIdx, :);
 
-% Display the 3-D points.
-pcshow(xyzPoints, 'VerticalAxis', 'y', 'VerticalAxisDir', 'down', ...
-	'MarkerSize', 45);
-grid on
-hold off
+	% Display the 3-D points.
+	pcshow(xyzPoints, 'VerticalAxis', 'y', 'VerticalAxisDir', 'down', ...
+		'MarkerSize', 45);
+	grid on
+	hold off
 
-% Specify the viewing volume.
-loc1 = camPoses.Location{1};
-xlim([loc1(1)-10, loc1(1)+10]);
-ylim([loc1(2)-6, loc1(2)+6]);
-zlim([loc1(3)-4, loc1(3)+10]);
-camorbit(0, -30);
+	% Specify the viewing volume.
+	loc1 = camPoses.Location{1};
+	xlim([loc1(1)-10, loc1(1)+10]);
+	ylim([loc1(2)-6, loc1(2)+6]);
+	zlim([loc1(3)-4, loc1(3)+10]);
+	camorbit(0, -30);
 
-title('Refined Camera Poses');
+	title('Refined Camera Poses');
+end
+
+resultsTable = table(mean(mean(ErrorLocation, 2)), mean(mean(errorX, 2)), ...
+	mean(mean(errorZ, 2)), ...
+	'VariableNames', {'AvgErrorLoc', 'AvgErrorX', 'AvgErrorY', 'AvgErrorZ'});
+writetable(resultsTable, filename, 'Range', ['A' num2str(4 + c + 3 + 4*repetitions + 4*3)]);
