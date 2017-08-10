@@ -10,24 +10,23 @@ classdef ViewWindow < handle
 		function obj=ViewWindow(num)
 			obj.Views = table;
 			obj.WindowSize = num;
-			obj.NumViews = 0;
 		end
 		function addPoints(obj, viewId, points, features, conversion)
-			if obj.NumViews < obj.WindowSize
-				obj.NumViews = obj.NumViews + 1;
-			end
 			
-			% shift
-			if obj.NumViews > 1
-				for i = obj.NumViews:-1:2
-					obj.Views{i, :} = obj.Views{i - 1, :};
+			view = table(viewId, {points}, {features}, {conversion}, ...
+				'VariableNames', {'ViewId', 'Points', 'Features', ...
+				'Conversion'});
+			
+			if isempty(obj.Views)
+				obj.Views = view;
+			else
+				% add new view
+				obj.Views = [obj.Views; view];
+				if size(obj.Views, 1) > obj.WindowSize
+					% shift
+					obj.Views = obj.Views(2:end, :);
 				end
 			end
-			% add new image
-			obj.Views.ViewId{1} = viewId;
-			obj.Views.Points{1} = points;
-			obj.Views.Features{1} = features;
-			obj.Views.Conversion{1} = conversion;
 		end
 	end
 			

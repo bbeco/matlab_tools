@@ -1,6 +1,17 @@
-function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewsPairs)
+function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewPairs)
 %	This function finds point tracks among several views and stores the matches 
 %	in the ViewSet's connections.
+%		Input:
+%			-vSet: The viewSet to be used to store connections
+%			-vWindow: The ViewWindow object uset to store matching
+%				information between views inside the window
+%			-lastViewPairs: the result of the last call to matchFeatures
+%				(this are the matches between the last and second last
+%				view);
+%
+%		Output:
+%			-vSet: The viewSet updated with the newly discovered
+%			connections.
 %
 %	TODO: this should be improved by exploiting the matlab's intersect function 
 %	and some kind of balanced binary tree for round based features comparison.
@@ -20,63 +31,92 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewsPairs)
 %	You should have received a copy of the GNU Lesser General Public License
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	correspondences = cell(1, vWindow.WindowSize - 1);
-	matches = cell(1, vWindow.WindowSize - 1);
-	matchesCounter = 0;
-    
-    if isempty(lastViewsPairs)
+	if isempty(lastViewPairs)
         % No matches in the last 2 views. There cannot be any longer
-        % matches
-        return;
-    end
-    
-    % Swap the matching columns so that the indexes in the first column 
-    % always refer to the points in the most recent view (last view)
-	correspondences{1, 1} = lastViewsPairs(:, [2, 1]);
-	
-	features1 = vWindow.Views.Features{1};
-	for i = 3:vWindow.WindowSize
-		features2 = vWindow.Views.Features{i};
-		indexPairs = matchFeatures(features1, features2);
-		correspondences{1, i - 1} = indexPairs;
+        % tracks
+		warning(...
+			'Unable to compute tracks: no matches in the last 2 views');
+		return;
 	end
-
-	v = zeros(1, vWindow.WindowSize - 1);
-	for i = 1:size(lastViewsPairs, 1)
-        % try to track a keypoints in every view belonging to window.
-		% If the key points is found in every vieww, it is added to the tracks 
-		% and several connections are added (as many as the number of views in
-		% the window)
-		viewsCounter = 1;
-		while viewsCounter < vWindow.WindowSize
-			index = correspondences{1, viewsCounter};
-			[~, ~, ib] = intersect(correspondences{1, 1}(i, 1), index(:, 1));
-            if ~isempty(ib)
-                v(viewsCounter) = ib;
-                viewsCounter = viewsCounter + 1;
-			else
-				break;
-            end
-		end
-		if viewsCounter >= vWindow.WindowSize
-			for j = 1:length(v)
-				matchesCounter = matchesCounter + 1;
-                % maybe a table is more suitable for the matches' purpose
-				matches{matchesCounter, j} = correspondences{1, j}(v(j), :);
-			end
-		else
-			continue;
+	
+	correspondences = cell(vWindow.WindowSize);
+	correspondences{end - 1, end} = lastViewPairs;
+	
+	%This creates a table with all the mathces among every view contained
+	%in the window. Only the upper left triangle block is relevant since
+	%the matches are symmetric
+	for i = 1:vWindow.WindowSize - 2
+		features1 = vWindow.Views.Features{i};
+		for j = (i + 1):vWindow.WindowSize
+			features2 = vWindow.Views.Features{j};
+			index = matchFeatures(features1, features2, 'Unique', true);
+			correspondences{i, j} = index;
 		end
 	end
 	
-    if matchesCounter < 1
-        return;
-    end
-    
-	% Adding matches between views
-    lastViewId = vSet.NumViews;
+	goodMatches = cell(size(correspondences));
+	v = zeros(1, vWindow.WindowSize);
 	for i = 1:vWindow.WindowSize - 1
-		vSet = addConnection(vSet, lastViewId, lastViewId - i, 'Matches', cat(1, matches{:, i}));
+		len = size(correspondences{i, i + 1}, 1);
+		if len < 1
+			% It means we have just found two consecutive views without
+			% any matches.
+			id1 = vWindow.Views.ViewId(i);
+			id2 = vWindow.Views.ViewId(i + 1);
+			warning(['No correspondences between frame ', num2str(id1), ...
+				' and frame ', num2str(id2)]);
+			return;
+		end
+		for j = 1:len
+			% reset view counter
+			viewCounter = i + 1;
+			while viewCounter <= vWindow.WindowSize
+				%looking for correspondences with view (i + 1)
+				index = correspondences{i, viewCounter}(:, 1);
+				[~, ~, ib] = intersect(...
+					correspondences{i, i + 1}(j, 1), index);
+				if ~isempty(ib)
+					v(viewCounter) = ib;
+					if viewCounter >= vWindow.WindowSize
+						% TODO check tracks coherence
+						for k = (i + 1):vWindow.WindowSize
+							goodMatches{i, k}(end + 1, :) = ...
+								correspondences{i, k}(v(k), :);
+						end
+						% we exit from the inner loop for sure now
+					end
+					viewCounter = viewCounter + 1;
+				else
+					% this features is not found in every view of the
+					% window
+					break;
+				end
+			end
+		end
 	end
 	
+	% Add goodMatches only
+	for i = 1:vWindow.WindowSize - 1
+		for j = (i + 1):vWindow.WindowSize
+			id1 = vWindow.Views.ViewId(i);
+			id2 = vWindow.Views.ViewId(j);
+			if ~hasConnection(vSet, id1, id2)
+				vSet = addConnection(vSet, id1, id2, ...
+					'Matches', goodMatches{i, j});
+			else
+				for k = 1:size(vSet.Connections, 1)
+					if ~isempty(vSet.Connections) &&...
+							vSet.Connections.ViewId1(k) == id1 ...
+							&& vSet.Connections.ViewId2(k) == id2
+						% Combine data and remove repetitions
+						oldMatches = vSet.Connections.Matches{k};
+						matches = union(oldMatches, goodMatches{i, j}, ...
+							'rows');
+						vSet = updateConnection(vSet, id1, id2, ...
+							'Matches', matches);
+					end
+				end
+			end
+		end
+	end
 end

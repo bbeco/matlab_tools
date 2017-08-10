@@ -30,7 +30,7 @@ vSet = addView(vSet, 4, 'Points', [6 6], 'Orientation', eye(3), 'Location', [0 0
 addPoints(vWindow, 4, [6 6], f1, [6 6]);
 vSet = computeTrackAndCreateConnections(vSet, vWindow, [1, 1]);
 
-if isequal(cat(1,vSet.Connections.Matches{:}), [2 1; 1 2; 1 2; 1 1])
+if isequal(cat(1,vSet.Connections.Matches{:}), [1 2; 2 1; 2 1; 1 1])
     disp(['Test ', num2str(testId), ' OK']);
 else
     error(['Test ', num2str(testId), ' FAILED']);
@@ -59,7 +59,7 @@ vSet = addView(vSet, 4, 'Points', [6 6], 'Orientation', eye(3), 'Location', [0 0
 addPoints(vWindow, 4, [6 6], f1, [6 6]);
 vSet = computeTrackAndCreateConnections(vSet, vWindow, [1, 1]);
 
-if isequal(cat(1,vSet.Connections.Matches{:}), [1 2; 1 1; 1 1; 1 2])
+if isequal(cat(1,vSet.Connections.Matches{:}), [1 2; 1 1; 2 1; 2 1; 1 1])
     disp(['Test ', num2str(testId), ' OK']);
 else
     error(['Test ', num2str(testId), ' FAILED']);
@@ -115,7 +115,7 @@ vSet = addView(vSet, 4, 'Points', [6 6], 'Orientation', eye(3), 'Location', [0 0
 addPoints(vWindow, 4, [6 6], f2, [6 6]);
 vSet = computeTrackAndCreateConnections(vSet, vWindow, [1 1]);
 
-if isequal(cat(1, vSet.Connections.Matches{:}), [1 1; 1 1; 1 2])
+if isequal(cat(1, vSet.Connections.Matches{:}), [2 1; 2 1; 2 1; 1 1; 1 1; 1 1])
     disp(['Test ', num2str(testId), ' OK']);
 else
     error(['Test ', num2str(testId), ' FAILED']);
