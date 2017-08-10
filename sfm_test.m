@@ -2,14 +2,14 @@ clear VARIABLES;
 addpath('coordinate_transform');
 addpath('utils/');
 addpath('filters/');
-imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
-load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
-filename = '../test4.xlsx';
+imageDir = fullfile('images', 'sfm_test', 'test7', '*.png');
+load(fullfile('images', 'sfm_test', 'test7', 'groundTruth.mat'));
+filename = '../test7.xlsx';
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = false;
-repetitions = 20;
+enableFigures = true;
+repetitions = 1;
 
 computeRelativeScaleBeforeBundleAdjustment = false;
 maxAcceptedReprojectionError = 0.8;
