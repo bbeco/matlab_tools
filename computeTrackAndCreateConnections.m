@@ -72,13 +72,31 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewPairs)
 			viewCounter = i + 1;
 			while viewCounter <= vWindow.WindowSize
 				%looking for correspondences with view (i + 1)
-				index = correspondences{i, viewCounter}(:, 1);
+				index = correspondences{i, viewCounter};
 				[~, ~, ib] = intersect(...
-					correspondences{i, i + 1}(j, 1), index);
+					correspondences{i, i + 1}(j, 1), index(:, 1));
+				
 				if ~isempty(ib)
+					
+					% checking if there is an existing path for features
+					% correspondences{i, viewCounter}(ib, 1) from view
+					% i to view viewCounter.
+					idx = findMatchingFeatureIndex(correspondences, i, viewCounter,...
+						index(ib, 1));
+					if idx ~= index(ib, 2)
+						vId1 = vWindow.Views.ViewId(i);
+						vId2 = vWindow.Views.ViewId(viewCounter);
+						warning([...
+							'Features ', num2str(index(ib, 1)),...
+							' in view ', num2str(vId1), ...
+							' cannot be tracked to feature ', ...
+							num2str(index(ib, 2)), ...
+							' in view ', num2str(vId2)]);
+						break;
+					end
+					
 					v(viewCounter) = ib;
 					if viewCounter >= vWindow.WindowSize
-						% TODO check tracks coherence
 						for k = (i + 1):vWindow.WindowSize
 							goodMatches{i, k}(end + 1, :) = ...
 								correspondences{i, k}(v(k), :);
@@ -119,4 +137,39 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewPairs)
 			end
 		end
 	end
+end
+
+function destFeatureIndex = findMatchingFeatureIndex(correspondences, ...
+	sourceView, destView, sourceFeatureIndex)
+% This function follows the track for a specific feature index in
+% sourceView view and return the destination feature index in destView
+% view.
+% If the there is no track for the input features that starts in sourceView
+% and ends in destView, this function returns -1.
+% Both sourceView and destView are not unique view ids, they are
+% the sourceView's and destView's position inside the tracking window; e.g.
+% sourceView = 1 for the oldest view in the window, 2 for the second oldest
+% and so on.
+	if sourceView >= destView || destView > size(correspondences, 2)
+		error(['Unable to follow features from view ', ...
+			num2str(sourceView), ' to view ', num2str(destView),...
+			' in tracking window']);
+	end
+	
+	l = size(correspondences{sourceView, sourceView + 1}, 1);
+	for k = 1:l
+		if correspondences{sourceView, sourceView + 1}(k, 1) == ...
+				sourceFeatureIndex
+			if sourceView + 1 == destView
+				destFeatureIndex = ...
+					correspondences{sourceView, sourceView + 1}(k, 2);
+			else
+				destFeatureIndex = findMatchingFeatureIndex(...
+					correspondences, sourceView + 1, destView, ...
+					correspondences{sourceView, sourceView + 1}(k, 2));
+			end
+			return;
+		end
+	end
+	destFeatureIndex = -1;
 end
