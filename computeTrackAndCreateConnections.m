@@ -31,7 +31,9 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewPairs)
 %	You should have received a copy of the GNU Lesser General Public License
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	if isempty(lastViewPairs)
+	correspondences = cell(vWindow.WindowSize - 1);
+    
+    if isempty(lastViewsPairs)
         % No matches in the last 2 views. There cannot be any longer
         % tracks
 		warning(...
@@ -41,20 +43,42 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewPairs)
 	
 	correspondences = cell(vWindow.WindowSize);
 	correspondences{end - 1, end} = lastViewPairs;
-	
+
 	%This creates a table with all the mathces among every view contained
 	%in the window. Only the upper left triangle block is relevant since
 	%the matches are symmetric
-	for i = 1:vWindow.WindowSize - 2
-		features1 = vWindow.Views.Features{i};
-		for j = (i + 1):vWindow.WindowSize
-			features2 = vWindow.Views.Features{j};
-			index = matchFeatures(features1, features2, 'Unique', true);
-			correspondences{i, j} = index;
+	
+	% fill the elements right above the diagonal
+	for i = 1:vWindowSize - 1
+		id1 = vWindow.Views.ViewId(i);
+		id2 = vWindow.Views.ViewId(i + 1);
+		matches = getMatches(vSet, id1, id2);
+		if isempty(matches)
+			warning(['No matches between view ', vId1, ...
+			' and view ', vId2]);
+			return;
 		end
+		correspondences{i, i + 1} = matches;
 	end
 	
-	goodMatches = cell(size(correspondences));
+	% fill all remainin elements
+	for i = 1:vWindow.WindowSize - 1
+		for j = (i + 2):vWindow.WindowSize
+			for k = 1:correspondences{i, j - 1}
+				idx = findFeatures(correspondence, i, j, ...
+					correspondences{i, j - 1}(k, 1));
+				if idx > 0
+					correspondences{i, j}(end + 1, :) = ...
+						[correspondences{i, j - 1}(k, 1), idx];
+				else
+					continue;
+				end
+			end
+		end
+	end
+			
+	
+	goodMatches = cell(size(correspondences), 'like', correspondences);
 	v = zeros(1, vWindow.WindowSize);
 	for i = 1:vWindow.WindowSize - 1
 		len = size(correspondences{i, i + 1}, 1);
@@ -67,6 +91,8 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewPairs)
 				' and frame ', num2str(id2)]);
 			return;
 		end
+
+		v = zeros(1, vWindow.WindowSize - 1);
 		for j = 1:len
 			% reset view counter
 			viewCounter = i + 1;
@@ -75,28 +101,17 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewPairs)
 				index = correspondences{i, viewCounter};
 				[~, ~, ib] = intersect(...
 					correspondences{i, i + 1}(j, 1), index(:, 1));
-				
+
 				if ~isempty(ib)
-					
-					% checking if there is an existing path for features
-					% correspondences{i, viewCounter}(ib, 1) from view
-					% i to view viewCounter.
-					idx = findMatchingFeatureIndex(correspondences, i, viewCounter,...
-						index(ib, 1));
-					if idx ~= index(ib, 2)
-						vId1 = vWindow.Views.ViewId(i);
-						vId2 = vWindow.Views.ViewId(viewCounter);
-						warning([...
-							'Features ', num2str(index(ib, 1)),...
-							' in view ', num2str(vId1), ...
-							' cannot be tracked to feature ', ...
-							num2str(index(ib, 2)), ...
-							' in view ', num2str(vId2)]);
-						break;
-					end
-					
+					%TODO check if feature with index correspondences{i, i + 1}(j,
+					%1) in view i matches correspondences{i, viewCounter}(ib, 2) in
+					%view viewCounter
+
 					v(viewCounter) = ib;
 					if viewCounter >= vWindow.WindowSize
+						%this feature has been tracked in every view inside window.
+						%Add it to goodMatches with the right indexes (the ones
+						%stored in vector v)
 						for k = (i + 1):vWindow.WindowSize
 							goodMatches{i, k}(end + 1, :) = ...
 								correspondences{i, k}(v(k), :);
@@ -172,4 +187,19 @@ function destFeatureIndex = findMatchingFeatureIndex(correspondences, ...
 		end
 	end
 	destFeatureIndex = -1;
+end
+
+function matches = getMatches(vSet, vId1, vId2)
+% This function return the matches stored in the connection between view vId1
+% and vId2.
+	if ~hasConnection(vSet, vId1, vId2)
+		return;
+	end
+	for j = 1: size(vSet.Connections, 1)
+		if vSet.Connections.ViewId1 == vId1 &&
+			vSet.Connections.ViewId2 == vId2
+			matches = vSet.Connections.Matches{id1, id2};
+			break;
+		end
+	end
 end
