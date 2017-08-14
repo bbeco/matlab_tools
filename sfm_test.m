@@ -18,10 +18,6 @@ maxAcceptedReprojectionError = 0.8;
 filterMatches = false;
 angularThreshold = 2; %degrees
 
-projectExtractedKeyPointDirections = false;
-dim = 270;
-f = 1;
-
 % minimun threshold for the third components of key points directions.
 % This is used when the keypoints are not projected on a new image plane for 
 % essential matrix estimation
