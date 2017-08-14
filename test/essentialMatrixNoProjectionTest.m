@@ -1,11 +1,9 @@
-imageDir = fullfile('images', 'sfm_test', 'test4', {'ll0.png', 'll1.png'});
+imageDir = fullfile('images', 'sfm_test', 'test5', {'ll1.png', 'll2.png'});
 imds = imageDatastore(imageDir);
 
 addpath(fullfile('utils'));
 addpath(fullfile('coordinate_transform'));
-
-removeBackPtsBeforeEestimation = false;
-zMin = 0.01;
+zMin = 0.0878;
 
 % Convert the images to grayscale.
 images = cell(1, numel(imds.Files));
@@ -41,52 +39,13 @@ features1 = features1(validIdx1, :);
 features2 = features2(validIdx2, :);
 indexPairs = matchFeatures(features1, features2, 'Unique', true);
 
-% theese indexes have to be re-arranged with the order given by the
-% indexPairs vector, then they can be used to select points that belongs to
-% the frontal hemisphere before computing the relative camera pose.
-frontIdx1 = frontIdx1(indexPairs(:, 1));
-frontIdx2 = frontIdx2(indexPairs(:, 2));
+[relOrientation, relLcation, validPtsFraction, iterations] = ...
+	helperEstimateRelativePose(points1, points2, ...
+	conversion1, conversion2, validIdx1, validIdx2, ...
+	frontIdx1, frontIdx2, indexPairs, cameraParams);
 
-if removeBackPtsBeforeEestimation
-	indexPairs = indexPairs(frontIdx1 & frontIdx2, :);
-end
-
-matchedPts1 = conversion1(indexPairs(:, 1), :);
-matchedPts2 = conversion2(indexPairs(:, 2), :);
-disp(['Number of matches for E estimation: ', ...
-	num2str(size(matchedPts1, 1))]);
-
-for i = 1:100
-	% inliersIndex is a logical vector with the points that satisfy the
-	% epipolar constraint.
-	[E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1, ...
-		matchedPts2, cameraParams);
-
-	disp(['inliers points ration: ', num2str(sum(inliersIndex)/numel(inliersIndex))]);
-
-	if status ~= 0
-		error('Something is wrong with E estimation');
-	end
-	
-	if sum(inliersIndex) / numel(inliersIndex) < .3
-		continue;
-	end
-
-	if ~removeBackPtsBeforeEestimation
-		% Remove inliers that belongs to the back hemisphere
-		inliersIndex = inliersIndex(frontIdx1 & frontIdx2);
-	end
-
-	% Valid pointsPtsIndex is the fraction of points that reproject in front of
-	% the two cameras it should be above .9
-	[relOrientation, relLocation, validPtsIndex] = relativeCameraPose(E, ...
-		cameraParams, ...
-		matchedPts1(inliersIndex, :), matchedPts2(inliersIndex, :));
-	
-	if validPtsIndex > .8
-		break;
-	end
-end
-relOrientation
+disp(['Iterations: ', num2str(iterations)]);
+disp('Orientation: ');
+rotm2eul(relOrientation)*180/pi
 relLocation
-validPtsIndex
+validPtsFraction
