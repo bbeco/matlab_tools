@@ -2,9 +2,9 @@ clear VARIABLES;
 addpath('coordinate_transform');
 addpath('utils/');
 addpath('filters/');
-imageDir = fullfile('images', 'sfm_test', 'test7', '*.png');
-load(fullfile('images', 'sfm_test', 'test7', 'groundTruth.mat'));
-filename = '../test7.xlsx';
+imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
+load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
+filename = '../test4.xlsx';
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
@@ -35,10 +35,12 @@ viewsWindowSize = 2;
 
 imds = imageDatastore(imageDir);
 c = numel(imds.Files);
-errorLocation = zeros(repetitions, c);
-errorX = zeros(repetitions, c);
-errorY = zeros(repetitions, c);
-errorZ = zeros(repetitions, c);
+locXerror = zeros(repetitions, c);
+locYerror = zeros(repetitions, c);
+locZerror = zeros(repetitions, c);
+angularXerror = zeros(repetitions, c);
+angularYerror = zeros(repetitions, c);
+angularZerror = zeros(repetitions, c);
 
 distanceGT = zeros(c, 1);
 orientationGT = zeros(c, 3);
@@ -59,16 +61,18 @@ for i = 1:repetitions
 	for j = 1:size(camPoses, 1)
 		location = camPoses.Location{j};
 		locationGT = groundTruthPoses.Location{j};
-		errorLocation(i, j) = sqrt(sum((location - locationGT).^2));
+		locXerror(i, j) = abs(location(1) - locationGT(1));
+		locYerror(i, j) = abs(location(2) - locationGT(2));
+		locZerror(i, j) = abs(location(3) - locationGT(3));
 		
 		% rotm2eul expects rotation matrixes in premultiply form, we need to 
 		% transpose the orientations before feeding them to rotm2eul.
 		orientation = rotm2eul(camPoses.Orientation{j}');
 		angularErrors = abs(orientation - ...
 			rotm2eul(groundTruthPoses.Orientation{j}'));
-		errorZ(i, j) = angularErrors(1);
-		errorY(i, j) = angularErrors(2);
-		errorX(i, j) = angularErrors(3);
+		angularZerror(i, j) = angularErrors(1);
+		angularYerror(i, j) = angularErrors(2);
+		angularXerror(i, j) = angularErrors(3);
 	end
 end
 
@@ -80,15 +84,15 @@ for j = 2:c
 		rotm2eul(groundTruthPoses.Orientation{j - 1}'));
 end
 
-errorX = 180/pi * errorX;
-errorY = 180/pi * errorY;
-errorZ = 180/pi * errorZ;
+angularXerror = 180/pi * angularXerror;
+angularYerror = 180/pi * angularYerror;
+angularZerror = 180/pi * angularZerror;
 orientationGT = 180/pi*orientationGT;
 
 %% Write results
 params = table(repetitions, computeRelativeScaleBeforeBundleAdjustment, ...
 	maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
-	projectExtractedKeyPointDirections, dim, f,...
+	zMin,...
 	prefilterLLKeyPoints, maxLatitudeAngle, performBundleAdjustment, ...
 	viewsWindowSize);
 
@@ -101,19 +105,41 @@ groundTruthTable = table(distanceGT, ...
 	'VariableNames', columnNames);
 writetable(groundTruthTable, filename, 'Range', 'A4');
 
-columnNames = {'repetition', 'LocationErr'};
-errorLocationTable = table([1:repetitions]', errorLocation, ...
+base = 4 + c;
+tSize = repetitions + 3;
+
+%location error X
+columnNames = {'repetition', 'locXerror'};
+errorLocationTable = table((1:repetitions)', locXerror, ...
 	'VariableNames', columnNames);
-writetable(errorLocationTable, filename, 'Range', ['A' num2str(4 + c + 3)]);
-errorXtable = table([1:repetitions]', errorX, ...
+writetable(errorLocationTable, filename, 'Range', ['A' num2str(base + tSize)]);
+
+%location error Y
+columnNames = {'repetition', 'locYerror'};
+errorLocationTable = table((1:repetitions)', locYerror, ...
+	'VariableNames', columnNames);
+writetable(errorLocationTable, filename, 'Range', ['A' num2str(base + 2*tSize)]);
+
+%location error Z
+columnNames = {'repetition', 'locZerror'};
+errorLocationTable = table((1:repetitions)', locZerror, ...
+	'VariableNames', columnNames);
+writetable(errorLocationTable, filename, 'Range', ['A' num2str(base + 3*tSize)]);
+
+%angular error X
+errorXtable = table((1:repetitions)', angularXerror, ...
 	'VariableNames', {'repetitions', 'ErrorX_deg'});
-writetable(errorXtable, filename, 'Range', ['A' num2str(4 + c + 3 + repetitions + 3)]);
-errorYtable = table([1:repetitions]', errorY, ...
+writetable(errorXtable, filename, 'Range', ['A' num2str(base + 4*tSize)]);
+
+%angular error Y
+errorYtable = table((1:repetitions)', angularYerror, ...
 	'VariableNames', {'repetitions', 'ErrorY_deg'});
-writetable(errorYtable, filename, 'Range', ['A' num2str(4 + c + 3 + 2*repetitions + 2*3)]);
-errorZtable = table([1:repetitions]', errorZ, ...
+writetable(errorYtable, filename, 'Range', ['A' num2str(base + 5*tSize)]);
+
+%angular error Z
+errorZtable = table((1:repetitions)', angularZerror, ...
 	'VariableNames', {'repetitions', 'ErrorZ_deg'});
-writetable(errorZtable, filename, 'Range', ['A' num2str(4 + c + 3 + 3*repetitions + 3*3)]);
+writetable(errorZtable, filename, 'Range', ['A' num2str(base + 6*tSize)]);
 
 if enableFigures
 	% Display camera poses.

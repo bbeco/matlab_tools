@@ -27,6 +27,8 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 	
 	cameraParams = cameraParameters;
 	
+	vWindow = ViewWindow(2);
+	
 	%% Processing first image
 	% Load first image
 	disp('Processing image 1');
@@ -65,6 +67,10 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		prevPointsConversion,...
 		'Orientation', eye(3, 'like', prevPoints.Location), 'Location', ...
 		zeros(1, 3, 'like', prevPoints.Location));
+	
+	addPoints(vWindow, viewId, prevPoints(prevFrontIndex, :), ...
+		prevFeatures(prevFrontIndex, :), ...
+		prevPointsConversion(prevFrontIndex, :));
 
 	%% Processing all the other images
 	for i = 2:numel(images)
@@ -92,7 +98,7 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 
 		currFeatures = extractFeatures(I, currPoints);
 		indexPairs = matchFeatures(prevFeatures, currFeatures, ...
-			'MaxRatio', .6, 'Unique',  true);
+			'MaxRatio', .7, 'Unique',  true);
 
 		if filterMatches
 			validIndexes = filterLLMatches(prevPoints, currPoints, ...
@@ -114,6 +120,10 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		vSet = addView(vSet, i, 'Points', ...
 			currPointsConversion);
 		
+		addPoints(vWindow, i, currPoints(currFrontIndex, :), ...
+			currFeatures(currFrontIndex, :), ...
+			currPointsConversion(currFrontIndex, :));
+		
 		%The following have to be used when helperEstimateEssentialMatrix uses
 		%both back and front key points.
 % 		bothFrontIndex = prevFrontIndex(indexPairs(:, 1)) & ...
@@ -121,10 +131,6 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		
 % 		vSet = addConnection(vSet, i - 1, i, 'Matches', ...
 % 			indexPairs(bothFrontIndex, :));
-		%The following is correct if helperEstimateEssentialMatrix uses front
-		%key points only
-		vSet = addConnection(vSet, i - 1, i, ...
-			'Matches', indexPairs(inliersIdx, :));
 
 		% Get the table containing the previous camera pose.
 		prevPose = poses(vSet, i-1);
@@ -143,6 +149,10 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 			relativeScale = computeRelativeScale(vSet, i, cameraParams, maxAcceptedReprojectionError);
 			location = prevLocation + relativeScale*relativeLoc*prevOrientation;
 			vSet = updateView(vSet, i, 'Location', location);
+		end
+		
+		if i >= vWindow.WindowSize
+			vSet = computeTrackAndCreateConnections(vSet, vWindow);
 		end
 
 		% Find point tracks across all views.
