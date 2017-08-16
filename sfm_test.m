@@ -18,9 +18,10 @@ maxAcceptedReprojectionError = 0.8;
 filterMatches = false;
 angularThreshold = 2; %degrees
 
-projectExtractedKeyPointDirections = true;
-dim = 270;
-f = 1;
+% minimun threshold for the third components of key points directions.
+% This is used when the keypoints are not projected on a new image plane for 
+% essential matrix estimation
+zMin = 0.0878;
 
 prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
@@ -47,7 +48,7 @@ for i = 1:repetitions
 	[vSet, xyzPoints, reprojectionErrors] = ...
 		sfmLL_function(imageDir, computeRelativeScaleBeforeBundleAdjustment, ...
 		maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
-		projectExtractedKeyPointDirections, dim, f, ...
+		zMin, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, ...
 		performBundleAdjustment, viewsWindowSize);
 
@@ -146,7 +147,7 @@ if enableFigures
 	title('Refined Camera Poses');
 end
 
-resultsTable = table(mean(mean(ErrorLocation, 2)), mean(mean(errorX, 2)), ...
-	mean(mean(errorZ, 2)), ...
-	'VariableNames', {'AvgErrorLoc', 'AvgErrorX', 'AvgErrorY', 'AvgErrorZ'});
-writetable(resultsTable, filename, 'Range', ['A' num2str(4 + c + 3 + 4*repetitions + 4*3)]);
+% resultsTable = table(mean(mean(errorLocation, 2)), mean(mean(errorX, 2)), ...
+% 	mean(mean(errorZ, 2)), ...
+% 	'VariableNames', {'AvgErrorLoc', 'AvgErrorX', 'AvgErrorY', 'AvgErrorZ'});
+% writetable(resultsTable, filename, 'Range', ['A' num2str(4 + c + 3 + 4*repetitions + 4*3)]);
