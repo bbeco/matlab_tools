@@ -33,7 +33,7 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewPairs)
 
 	correspondences = cell(vWindow.WindowSize - 1);
     
-    if isempty(lastViewsPairs)
+	if isempty(lastViewPairs)
         % No matches in the last 2 views. There cannot be any longer
         % tracks
 		warning(...
@@ -49,13 +49,13 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow, lastViewPairs)
 	%the matches are symmetric
 	
 	% fill the elements right above the diagonal
-	for i = 1:vWindowSize - 1
-		id1 = vWindow.Views.ViewId(i);
-		id2 = vWindow.Views.ViewId(i + 1);
-		matches = getMatches(vSet, id1, id2);
+	for i = 1:vWindow.WindowSize - 1
+		vId1 = vWindow.Views.ViewId(i);
+		vId2 = vWindow.Views.ViewId(i + 1);
+		matches = getMatches(vSet, vId1, vId2);
 		if isempty(matches)
-			warning(['No matches between view ', vId1, ...
-			' and view ', vId2]);
+			warning(['No matches between view ', num2str(vId1), ...
+			' and view ', num2str(vId2)]);
 			return;
 		end
 		correspondences{i, i + 1} = matches;
@@ -192,11 +192,12 @@ end
 function matches = getMatches(vSet, vId1, vId2)
 % This function return the matches stored in the connection between view vId1
 % and vId2.
+	matches = [];
 	if ~hasConnection(vSet, vId1, vId2)
 		return;
 	end
 	for j = 1: size(vSet.Connections, 1)
-		if vSet.Connections.ViewId1 == vId1 &&
+		if vSet.Connections.ViewId1 == vId1 && ...
 			vSet.Connections.ViewId2 == vId2
 			matches = vSet.Connections.Matches{id1, id2};
 			break;
