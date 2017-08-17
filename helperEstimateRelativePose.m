@@ -1,10 +1,12 @@
-function [relOrientation, relLocation, validPtsFraction, inliersIndex, i, indexPairs] = ...
+function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
+	i, indexPairs, pointsForEEstimationCounter, ...
+	pointsForPoseEstimationCounter] = ...
 	helperEstimateRelativePose(conversion1, conversion2, ...
 	frontIdx1, frontIdx2, indexPairs, cameraParams)
 
 	removeBackPtsBeforeEestimation = true;
 	removeBackPointsBeforePoseEstimation = false;
-	maxIterations = 100;
+	maxIterations = 1;
 
 	% theese indexes have to be re-arranged with the order given by the
 	% indexPairs vector, then they can be used to select points that belongs to
@@ -20,6 +22,7 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex, i, indexP
 	matchedPts2 = conversion2(indexPairs(:, 2), :);
 	disp(['Number of matches for E estimation: ', ...
 		num2str(size(matchedPts1, 1))]);
+	pointsForEEstimationCounter = size(matchedPts1, 1);
 
 	for i = 1:maxIterations
 		% inliersIndex is a logical vector with the points that satisfy the
@@ -47,6 +50,8 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex, i, indexP
 		[relOrientation, relLocation, validPtsFraction] = relativeCameraPose(E, ...
 			cameraParams, ...
 			matchedPts1(inliersIndex, :), matchedPts2(inliersIndex, :));
+		pointsForPoseEstimationCounter = ...
+			size(matchedPts1(inliersIndex, :), 1);
 
 		if validPtsFraction > .8
 			return;
