@@ -1,4 +1,5 @@
 %% Init
+clear VARIABLES
 imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
 load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
 % this is the name of the file used to store the results
@@ -7,16 +8,19 @@ imds = imageDatastore(imageDir);
 
 addpath(fullfile('utils'));
 addpath(fullfile('coordinate_transform'));
-usePointProjection = true;
-zMin = 0.0878;
+usePointProjection = false;
+zMin = 0.037;
 dim = 540;
 
 % creating ground truth vectors
 [locationGT, orientationGT] = computeRelativeMotion(groundTruthPoses);
 orientationGT = orientations2euler(orientationGT);
-% converting orientations to degrees
+% converting orientations to degrees and normalizing distances
 for i = 1:size(orientationGT, 1)
 	orientationGT{i} = orientationGT{i}*180/pi;
+	if i ~= 1
+		locationGT{i} = locationGT{i}/norm(locationGT{i});
+	end
 end
 
 % Convert the images to grayscale.
@@ -78,9 +82,9 @@ for i = 2:numel(images)
 
 	if usePointProjection
 		[currConversion, currValidIdx] = ...
-			projectKeyPointDirections(prevPoints, width, height, dim);
+			projectKeyPointDirections(currPoints, width, height, dim);
 		currFrontIdx = ...
-			ones(size(currFrontIdx(currFrontIdx)), 'logical');
+			ones(size(currValidIdx(currValidIdx)), 'logical');
 	else
 		[currConversion, currValidIdx, currFrontIdx] = createPointsConversionTable(...
 			currPoints, zMin, width, height);
@@ -94,9 +98,7 @@ for i = 2:numel(images)
 	indexPairs = matchFeatures(prevFeatures, currFeatures, ...
 		'MaxRatio', .6, 'Unique', true);
 
-	[relOrientation, relLocation, validPtsFraction, inliersIndex, iterations, ...
-		indexPairs, pointsForEEstimationCounter(i - 1), ...
-		pointsForPoseEstimationCounter(i - 1)] = ...
+	[relOrientation, relLocation, validPtsFraction, inliersIndex, iterations, indexPairs, pointsForEEstimationCounter(i - 1), pointsForPoseEstimationCounter(i - 1)] = ...
 		helperEstimateRelativePose(prevConversion, currConversion, ...
 		prevFrontIdx, currFrontIdx, indexPairs, cameraParams);
 	

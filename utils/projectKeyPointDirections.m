@@ -19,7 +19,7 @@ function [pointsConversion, validIdx] = projectKeyPointDirections(...
 	l = size(points, 1);
 
 	pointsConversion = zeros(l, 2, 'like', points);
-	validIdx = zeros(l, 1, 'logical');
+	validIdx = zeros(1, l, 'logical');
 	realLength = 0;
 	
 	u0 = dim/2;
