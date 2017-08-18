@@ -28,15 +28,16 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 		% inliersIndex is a logical vector with the points that satisfy the
 		% epipolar constraint.
 		[E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1, ...
-			matchedPts2, cameraParams);
+			matchedPts2, cameraParams, 'MaxNumTrials', 50000, 'MaxDistance', 0.001);
 
 		if status ~= 0
 			error('Something is wrong with E estimation');
 		end
 
-		if sum(inliersIndex) / numel(inliersIndex) < .3
-			continue;
-		end
+% 		if sum(inliersIndex) / numel(inliersIndex) < .3
+% 			warning('Inliers index low after E estimation');
+% 			continue;
+% 		end
 
 % 		disp(['Inliers Index: ', num2str(sum(inliersIndex))]);
 		if removeBackPointsBeforePoseEstimation
