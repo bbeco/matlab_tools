@@ -21,12 +21,12 @@ angularThreshold = 2; %degrees
 % minimun threshold for the third components of key points directions.
 % This is used when the keypoints are not projected on a new image plane for 
 % essential matrix estimation
-zMin = 0.0878;
+zMin = 0.037;
 
 prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
 
-performBundleAdjustment = true;
+performBundleAdjustment = false;
 
 % This is the number of views for a keypoint to appear into in order for it to
 % be added in a connection's match.
@@ -48,11 +48,12 @@ orientationGT = zeros(c, 3);
 for i = 1:repetitions
 
 	[vSet, xyzPoints, reprojectionErrors] = ...
-		sfmLL_function(imageDir, computeRelativeScaleBeforeBundleAdjustment, ...
+		sfmLL_function(imageDir, ...
+		computeRelativeScaleBeforeBundleAdjustment, ...
 		maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
 		zMin, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, ...
-		performBundleAdjustment, viewsWindowSize);
+		performBundleAdjustment, viewsWindowSize, groundTruthPoses);
 
 	[vSet, groundTruthPoses] = normalizeViewSet(vSet, groundTruthPoses);
 	camPoses = poses(vSet);
