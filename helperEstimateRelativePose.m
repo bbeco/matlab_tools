@@ -4,8 +4,8 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 	helperEstimateRelativePose(conversion1, conversion2, ...
 	frontIdx1, frontIdx2, indexPairs, cameraParams)
 
-	removeBackPtsBeforeEestimation = false;
-	removeBackPointsBeforePoseEstimation = true;
+	removeBackPtsBeforeEestimation = true;
+	removeBackPointsBeforePoseEstimation = false;
 	maxIterations = 1;
 
 	% theese indexes have to be re-arranged with the order given by the
@@ -27,7 +27,7 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 	for i = 1:maxIterations
 		% inliersIndex is a logical vector with the points that satisfy the
 		% epipolar constraint.
-		[E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1, ...
+		[E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1,...
 			matchedPts2, cameraParams, 'MaxNumTrials', 50000, ...
 			'MaxDistance', 0.001);
 
