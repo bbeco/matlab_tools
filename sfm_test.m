@@ -11,7 +11,7 @@ filename = '../test4.xlsx';
 enableFigures = true;
 repetitions = 1;
 
-computeRelativeScaleBeforeBundleAdjustment = false;
+computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 0.8;
 
 % filter those matches whose points have similar coordinates

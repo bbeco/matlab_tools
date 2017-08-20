@@ -157,7 +157,9 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		
 		% From the third image on, compute the relative scale
 		if i > 2 && computeRelativeScaleBeforeBundleAdjustment
-			relativeScale = computeRelativeScale(vSet, i, cameraParams, maxAcceptedReprojectionError);
+% 			relativeScale = computeRelativeScale(vSet, i, cameraParams, maxAcceptedReprojectionError);
+			relativeScale = computeRelativeScaleFromGroundTruth(...
+				groundTruthPoses, i, i - 1);
 			location = prevLocation + relativeScale*relativeLoc*prevOrientation;
 			vSet = updateView(vSet, i, 'Location', location);
 		end
