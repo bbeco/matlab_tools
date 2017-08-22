@@ -1,7 +1,7 @@
 %% Init
 clear VARIABLES
-imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
-load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
+imageDir = fullfile('images', 'sfm_test', 'test6', '*.png');
+load(fullfile('images', 'sfm_test', 'test6', 'groundTruth.mat'));
 % this is the name of the file used to store the results
 filename = fullfile('..', 'essentialMatrixTest.xlsx');
 imds = imageDatastore(imageDir);
@@ -11,18 +11,18 @@ addpath(fullfile('coordinate_transform'));
 usePointProjection = false;
 zMin = 0.037;
 dim = 540;
-repetitions = 20;
+repetitions = 30;
 
 % creating ground truth vectors
-[locationGT, orientationGT] = computeRelativeMotion(groundTruthPoses);
-orientationGT = orientations2euler(orientationGT);
+[relLocationGT, relOrientationGT] = computeRelativeMotion(groundTruthPoses);
+relOrientationGT = orientations2euler(relOrientationGT);
 % converting orientations to degrees and normalizing distances
-for i = 1:size(orientationGT, 1)
-	orientationGT{i} = orientationGT{i}*180/pi;
-	if i ~= 1
-		locationGT{i} = locationGT{i}/norm(locationGT{i});
-	end
-end
+% for i = 1:size(orientationGT, 1)
+% 	orientationGT{i} = orientationGT{i}*180/pi;
+% 	if i ~= 1
+% 		locationGT{i} = locationGT{i}/norm(locationGT{i});
+% 	end
+% end
 
 % Convert the images to grayscale.
 images = cell(1, numel(imds.Files));
@@ -38,6 +38,9 @@ locErrorZ = cell(repetitions, numel(images));
 orientErrorX = cell(repetitions, numel(images));
 orientErrorY = cell(repetitions, numel(images));
 orientErrorZ = cell(repetitions, numel(images));
+estimatedX = cell(repetitions, numel(images));
+estimatedY = cell(repetitions, numel(images));
+estimatedZ = cell(repetitions, numel(images));
 
 inliersCounter = zeros(numel(images) - 1, 1);
 validPointsFractionCounter = zeros(numel(images) - 1, 1);
@@ -55,6 +58,8 @@ end
 
 %% first image
 for j = 1:repetitions
+	disp(['Repetition: ', num2str(j)]);
+	disp('Processing image 1');
 	I = images{1};
 	[height, width] = size(I);
 	prevPoints = detectSURFFeatures(I);
@@ -82,10 +87,13 @@ for j = 1:repetitions
 	orientErrorX{j, 1} = 0;
 	orientErrorY{j, 1} = 0;
 	orientErrorZ{j, 1} = 0;
+	estimatedX{j, 1} = 0;
+	estimatedY{j, 1} = 0;
+	estimatedZ{j, 1} = 0;
 
 	%% remaining images
 	for i = 2:numel(images)
-
+		disp(['Processing image: ', num2str(i)]);
 		I = images{i};
 
 		currPoints = detectSURFFeatures(I);
@@ -113,13 +121,21 @@ for j = 1:repetitions
 			pointsForPoseEstimationCounter(i - 1)] = ...
 			helperEstimateRelativePose(prevConversion, currConversion, ...
 			prevFrontIdx, currFrontIdx, indexPairs, cameraParams);
+		
+		scale = norm(relLocationGT{i})/norm(relLocation);
 
-		orientError = abs(rotm2eul(relOrientation)*180/pi - ...
-			orientationGT{i});
+		orientError = abs(rotm2eul(relOrientation) - ...
+			relOrientationGT{i})*180/pi;
 		orientErrorX{j, i} = orientError(3);
 		orientErrorY{j, i} = orientError(2);
 		orientErrorZ{j, i} = orientError(1);
-		locationError = abs(relLocation - locationGT{i});
+		
+		estimatedX{j, i} = estimatedX{j, i - 1} + scale*relLocation(1);
+		estimatedY{j, i} = estimatedY{j, i - 1} + scale*relLocation(2);
+		estimatedZ{j, i} = estimatedZ{j, i - 1} + scale*relLocation(3);
+		
+		locationError = abs(scale*relLocation - relLocationGT{i});
+		locationError = locationError/norm(relLocationGT{i});
 		locErrorX{j, i} = locationError(1);
 		locErrorY{j, i} = locationError(2);
 		locErrorZ{j, i} = locationError(3);
@@ -137,7 +153,7 @@ for j = 1:repetitions
 end
 
 %% Write results
-groundTruthTable = table(locationGT, orientationGT);
+groundTruthTable = table(relLocationGT, relOrientationGT);
 estimatedTable = table(locErrorX);
 estimationDataTable = table(inliersCounter, ...
 	validPointsFractionCounter, pointsForEEstimationCounter, ...
@@ -157,5 +173,21 @@ writetable(table((1:repetitions)', orientErrorY), filename, 'Range', ...
 	['A', num2str(4*(repetitions + 3) + base)]);
 writetable(table((1:repetitions)', orientErrorZ), filename, 'Range', ...
 	['A', num2str(5*(repetitions + 3) + base)]);
-writetable(estimationDataTable, filename, 'Range', ...
+
+writetable(table((1:repetitions)', estimatedX), filename, 'Range', ...
 	['A', num2str(6*(repetitions + 3) + base)]);
+writetable(table((1:repetitions)', estimatedY), filename, 'Range', ...
+	['A', num2str(7*(repetitions + 3) + base)]);
+writetable(table((1:repetitions)', estimatedZ), filename, 'Range', ...
+	['A', num2str(8*(repetitions + 3) + base)]);
+
+locationGT = cat(1, groundTruthPoses.Location{:});
+writetable(table(locationGT(:, 1)'), filename, 'Range', ...
+	['A', num2str(9*(repetitions + 3) + base)]);
+writetable(table(locationGT(:, 2)'), filename, 'Range', ...
+	['A', num2str(10*(repetitions + 3) + base)]);
+writetable(table(locationGT(:, 3)'), filename, 'Range', ...
+	['A', num2str(11*(repetitions + 3) + base)]);
+
+% writetable(estimationDataTable, filename, 'Range', ...
+% 	['A', num2str(9*(repetitions + 3) + base)]);
