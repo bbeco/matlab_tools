@@ -4,8 +4,8 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 	helperEstimateRelativePose(conversion1, conversion2, ...
 	frontIdx1, frontIdx2, indexPairs, cameraParams)
 
-	removeBackPtsBeforeEestimation = true;
-	removeBackPointsBeforePoseEstimation = false;
+	removeBackPtsBeforeEestimation = false;
+	removeBackPointsBeforePoseEstimation = true;
 	maxIterations = 1;
 
 	% theese indexes have to be re-arranged with the order given by the
@@ -29,7 +29,7 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 		% epipolar constraint.
 		[E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1,...
 			matchedPts2, cameraParams, 'MaxNumTrials', 50000, ...
-			'MaxDistance', 0.001);
+			'MaxDistance', 0.0001);
 
 		if status ~= 0
 			error('Something is wrong with E estimation');

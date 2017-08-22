@@ -24,7 +24,8 @@ function [locError, orientError] = ...
 				
 				orientError{i} = abs(rotm2eul(estOrientation{i}') - ...
 					orientationGT);
-				locError{i} = abs(estLocation{i} - locationGT);
+				locError{i} = ...
+					abs(estLocation{i} - locationGT)/norm(locationGT);
 				break;
 			end
 		end
