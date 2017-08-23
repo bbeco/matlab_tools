@@ -1,7 +1,7 @@
 %% Init
 clear VARIABLES
-imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
-load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
+imageDir = fullfile('images', 'sfm_test', 'test9', '*.png');
+load(fullfile('images', 'sfm_test', 'test9', 'groundTruth.mat'));
 % this is the name of the file used to store the results
 filename = fullfile('..', 'essentialMatrixTest.xlsx');
 imds = imageDatastore(imageDir);
@@ -11,7 +11,13 @@ addpath(fullfile('coordinate_transform'));
 usePointProjection = false;
 zMin = 0.037;
 dim = 540;
-repetitions = 30;
+repetitions = 1;
+
+for i = 2:size(groundTruthPoses, 1)
+	groundTruthPoses.Orientation{i} = ...
+		groundTruthPoses.Orientation{i}*groundTruthPoses.Orientation{1}';
+end
+groundTruthPoses.Orientation{1} = eye(3, 'double');
 
 % creating ground truth vectors
 [relLocationGT, relOrientationGT] = ...
@@ -157,7 +163,7 @@ for j = 1:repetitions
 	end
 	
 	[locError, orientError] = computePoseError(location, orientation, ...
-		groundTruthPoses);
+		relativeGT);
 	
 	tmp = cat(1, locError{:});
 	locErrorX(j, :) = num2cell(tmp(:, 1)');
