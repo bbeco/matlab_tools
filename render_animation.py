@@ -3,24 +3,30 @@ import bpy
 from camera_pose import CameraPose
 
 baseOutputFolder = '/home/andrea/matlab_tools/images/sfm_test/test7/'
-firstFrameNumber = 2
-lastFrameNumber = 25
+firstFrameNumber = 1
+lastFrameNumber = 50
 cameraName = 'Camera.001'
+outputFile = '/tmp/poses.txt'
 
 def listCameraPoses():
-	print('% Location\nLocation = {')
-	for i in range(1, lastFrameNumber + 1):
+	file = open(outputFile, 'w')
+	s = ''
+	s = s + '% Location\nLocation = {\n'
+	for i in range(firstFrameNumber, lastFrameNumber + 1):
 		bpy.context.scene.frame_set(i)
 		c = CameraPose(bpy.data.objects[cameraName])
-		print('% Frame ', str(i))
-		c.printLocation()
-	print('};\n% Orientation\nOrientation = {')
-	for i in range(1, lastFrameNumber + 1):
+		s = s + '% Frame ' + str(i) + '\n'
+		s = s + c.getLocation() + '\n'
+	s = s + '};\n% Orientation\nOrientation = {\n'
+	for i in range(firstFrameNumber, lastFrameNumber + 1):
 		bpy.context.scene.frame_set(i)
 		c = CameraPose(bpy.data.objects[cameraName])
-		print('% Frame ', str(i))
-		c.printOrientation()
-	print('};')
+		s = s + '% Frame ' +  str(i) + '\n'
+		s = s + c.getOrientation() + '\n'
+	s = s + '};\n'
+	
+	file.write(s)
+	file.close()
 
 def renderAnimation():
 	cam = bpy.data.objects[cameraName]
