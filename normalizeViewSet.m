@@ -23,7 +23,8 @@ magnitudesGT = sqrt(sum(locationsGT.^2, 2));
 scaleFactor = median(magnitudesGT(2:end) ./ magnitudes(2:end));
 
 % Scale the locations
-locations = locations .* scaleFactor;
+% FIXME
+% locations = locations .* scaleFactor;
 
 camPoses.Location = num2cell(locations, 2);
 

@@ -63,6 +63,7 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 	% Create an empty viewSet object to manage the data associated with each
 	% view.
 	vSet = viewSet;
+	relVSet = viewSet;
 
 	% Add the first view. Place the camera associated with the first view
 	% and the origin, oriented along the Z-axis.
@@ -72,6 +73,10 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		prevPointsConversion(prevFrontIndex, :),...
 		'Orientation', eye(3, 'like', prevPoints.Location), 'Location', ...
 		zeros(1, 3, 'like', prevPoints.Location));
+	
+	
+	relVSet = addView(relVSet, viewId, 'Orientation', eye(3, 'double'), ...
+		'Orientation', eye(3, 'double'));
 	
 	addPoints(vWindow, viewId, prevPoints(prevFrontIndex, :), ...
 		prevFeatures(prevFrontIndex, :), ...
@@ -160,13 +165,16 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 			'Location', location);
 		
 		% From the third image on, compute the relative scale
-		if i > 2 && computeRelativeScaleBeforeBundleAdjustment
+		if i >= 2 && computeRelativeScaleBeforeBundleAdjustment
 % 			relativeScale = computeRelativeScale(vSet, i, cameraParams, maxAcceptedReprojectionError);
 			relativeScale = computeRelativeScaleFromGroundTruth(...
 				groundTruthPoses, i, i - 1);
 			location = prevLocation + relativeScale*relativeLoc*prevOrientation;
 			vSet = updateView(vSet, i, 'Location', location);
 		end
+		
+		relVSet = addView(relVSet, i, 'Orientation', relativeOrient, ...
+			'Location', relativeScale*relativeLoc);
 		
 		if i >= vWindow.WindowSize
 			vSet = computeTrackAndCreateConnections(vSet, vWindow);

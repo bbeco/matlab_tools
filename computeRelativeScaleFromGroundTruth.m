@@ -14,6 +14,5 @@ function rs = computeRelativeScaleFromGroundTruth(gtPoses, i, j)
 			num2str(i), ' and ', num2str(j)]);
 	end
 	
-	rs = norm(gtPoses.Location{i} - gtPoses.Location{j})/...
-		norm(gtPoses.Location{2});
+	rs = norm(gtPoses.Location{i} - gtPoses.Location{j});
 end
