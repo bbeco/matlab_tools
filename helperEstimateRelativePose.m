@@ -6,7 +6,11 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 
 	removeBackPtsBeforeEestimation = false;
 	removeBackPointsBeforePoseEstimation = true;
-	maxIterations = 1;
+	maxIterations = 100;
+	
+	% this is the minimum number of inliers after E estimation to consider the
+	% pose to be correct.
+	minFrontInliers = 20;
 
 	% theese indexes have to be re-arranged with the order given by the
 	% indexPairs vector, then they can be used to select points that belongs to
@@ -20,9 +24,9 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 
 	matchedPts1 = conversion1(indexPairs(:, 1), :);
 	matchedPts2 = conversion2(indexPairs(:, 2), :);
-	disp(['Number of matches for E estimation: ', ...
-		num2str(size(matchedPts1, 1))]);
-	pointsForEEstimationCounter = size(matchedPts1, 1);
+% 	disp(['Number of matches for E estimation: ', ...
+% 		num2str(size(matchedPts1, 1))]);
+	pointsForEEstimationCounter = size(indexPairs, 1);
 
 	for i = 1:maxIterations
 		% inliersIndex is a logical vector with the points that satisfy the
@@ -45,7 +49,7 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 			% Remove inliers that belongs to the back hemisphere
 			inliersIndex = inliersIndex(frontIdx1 & frontIdx2);
 		end
-% 		disp(['Frontal inliers index: ', num2str(sum(inliersIndex))]);
+		disp(['Frontal inliers index: ', num2str(sum(inliersIndex))]);
 
 		% Valid pointsPtsIndex is the fraction of points that reproject in front of
 		% the two cameras it should be above .8
@@ -56,6 +60,12 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 			size(matchedPts1(inliersIndex, :), 1);
 
 		if validPtsFraction > .8
+			return;
+		end
+		
+		% If we get enough inliers from E estimation, the pose is likely to be
+		% correct.
+		if pointsForPoseEstimationCounter >= minFrontInliers
 			return;
 		end
 	end

@@ -2,8 +2,8 @@ clear VARIABLES;
 addpath('coordinate_transform');
 addpath('utils/');
 addpath('filters/');
-imageDir = fullfile('images', 'sfm_test', 'test9', '*.png');
-load(fullfile('images', 'sfm_test', 'test9', 'groundTruth.mat'));
+imageDir = fullfile('images', 'sfm_test', 'test5');
+load(fullfile('images', 'sfm_test', 'test5', 'groundTruth.mat'));
 filename = '../test4.xlsx';
 
 % ********** PARAMETERS ************
@@ -146,9 +146,9 @@ if enableFigures
 	% Display camera poses.
 	camPoses = poses(vSet);
 	figure;
-	plotCamera(camPoses, 'Size', 2);
+	plotCamera(camPoses, 'Size', 0.2);
 	hold on
-	plotCamera(groundTruthPoses, 'Size', 2, 'Color', [0 1 0]);
+	plotCamera(groundTruthPoses, 'Size', 0.2, 'Color', [0 1 0]);
 
 	xlabel('X');
 	ylabel('Y');
@@ -166,9 +166,9 @@ if enableFigures
 
 	% Specify the viewing volume.
 	loc1 = camPoses.Location{1};
-	xlim([loc1(1)-100, loc1(1)+100]);
-	ylim([loc1(2)-60, loc1(2)+60]);
-	zlim([loc1(3)-40, loc1(3)+80]);
+	xlim([loc1(1)-10, loc1(1)+10]);
+	ylim([loc1(2)-6, loc1(2)+6]);
+	zlim([loc1(3)-4, loc1(3)+11]);
 	camorbit(0, -30);
 
 	title('Refined Camera Poses');

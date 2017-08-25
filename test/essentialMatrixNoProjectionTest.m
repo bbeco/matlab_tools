@@ -11,7 +11,7 @@ addpath(fullfile('coordinate_transform'));
 usePointProjection = false;
 zMin = 0.037;
 dim = 540;
-repetitions = 1;
+repetitions = 30;
 
 for i = 2:size(groundTruthPoses, 1)
 	groundTruthPoses.Orientation{i} = ...
@@ -43,14 +43,8 @@ locErrorZ = cell(repetitions, numel(images));
 orientErrorX = cell(repetitions, numel(images));
 orientErrorY = cell(repetitions, numel(images));
 orientErrorZ = cell(repetitions, numel(images));
-estimatedX = cell(repetitions, numel(images));
-estimatedY = cell(repetitions, numel(images));
-estimatedZ = cell(repetitions, numel(images));
-
-inliersCounter = zeros(numel(images) - 1, 1);
-validPointsFractionCounter = zeros(numel(images) - 1, 1);
-pointsForEEstimationCounter = zeros(numel(images) - 1, 1);
-pointsForPoseEstimationCounter = zeros(numel(images) - 1, 1);
+matches = cell(repetitions, numel(images));
+frontInliers = cell(repetitions, numel(images));
 
 if usePointProjection
 	K = [1, 0, dim/2;
@@ -125,8 +119,7 @@ for j = 1:repetitions
 			'MaxRatio', .6, 'Unique', true);
 
 		[relOrientation, relLocation, validPtsFraction, inliersIndex, ...
-			iterations, indexPairs, pointsForEEstimationCounter(i - 1), ...
-			pointsForPoseEstimationCounter(i - 1)] = ...
+			iterations, indexPairs, matches{j, i}, frontInliers{j, i}] = ...
 			helperEstimateRelativePose(prevConversion, currConversion, ...
 			prevFrontIdx, currFrontIdx, indexPairs, cameraParams);
 		
@@ -141,18 +134,11 @@ for j = 1:repetitions
 		location{i} = scale*relLocation;
 		orientation{i} = relOrientation;
 		
-		estimatedX{j, i} = estimatedX{j, i - 1} + scale*relLocation(1);
-		estimatedY{j, i} = estimatedY{j, i - 1} + scale*relLocation(2);
-		estimatedZ{j, i} = estimatedZ{j, i - 1} + scale*relLocation(3);
-		
 % 		locationError = abs(scale*relLocation - relLocationGT{i});
 % 		locationError = locationError/norm(relLocationGT{i});
 % 		locErrorX{j, i} = locationError(1);
 % 		locErrorY{j, i} = locationError(2);
 % 		locErrorZ{j, i} = locationError(3);
-
-		inliersCounter(i - 1) = sum(inliersIndex);
-		validPointsFractionCounter(i - 1) = validPtsFraction;
 
 		% prepare for next image
 		prevPoints = currPoints;
@@ -176,13 +162,11 @@ for j = 1:repetitions
 end
 
 %% Write results
-groundTruthTable = table(relLocationGT, ...
+groundTruthTable = table((1:size(relLocationGT, 1))', relLocationGT, ...
 	orientations2euler(relOrientationGT), ...
-	'VariableNames', {'relLoc', 'relOrient'});
-estimatedTable = table(locErrorX);
-estimationDataTable = table(inliersCounter, ...
-	validPointsFractionCounter, pointsForEEstimationCounter, ...
-	pointsForPoseEstimationCounter);
+	'VariableNames', {'ViewId', 'Location', 'Orientation'});
+
+estimationDataTable = table((1:repetitions)', matches, frontInliers);
 
 writetable(groundTruthTable, filename, 'Range', 'A2');
 writetable(table((1:repetitions)', locErrorX), filename, 'Range', ...
@@ -199,20 +183,6 @@ writetable(table((1:repetitions)', orientErrorY), filename, 'Range', ...
 writetable(table((1:repetitions)', orientErrorZ), filename, 'Range', ...
 	['A', num2str(5*(repetitions + 3) + base)]);
 
-writetable(table((1:repetitions)', estimatedX), filename, 'Range', ...
+
+writetable(estimationDataTable, filename, 'Range', ...
 	['A', num2str(6*(repetitions + 3) + base)]);
-writetable(table((1:repetitions)', estimatedY), filename, 'Range', ...
-	['A', num2str(7*(repetitions + 3) + base)]);
-writetable(table((1:repetitions)', estimatedZ), filename, 'Range', ...
-	['A', num2str(8*(repetitions + 3) + base)]);
-
-locationGT = cat(1, groundTruthPoses.Location{:});
-writetable(table(locationGT(:, 1)'), filename, 'Range', ...
-	['A', num2str(9*(repetitions + 3) + base)]);
-writetable(table(locationGT(:, 2)'), filename, 'Range', ...
-	['A', num2str(10*(repetitions + 3) + base)]);
-writetable(table(locationGT(:, 3)'), filename, 'Range', ...
-	['A', num2str(11*(repetitions + 3) + base)]);
-
-% writetable(estimationDataTable, filename, 'Range', ...
-% 	['A', num2str(9*(repetitions + 3) + base)]);
