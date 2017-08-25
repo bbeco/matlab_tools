@@ -14,11 +14,11 @@ def printAll():
 	print('% Location\nLocation = {')
 	for c in cameraList:
 		print('% ' + c.name)
-		c.printLocation()
+		print(c.getLocation())
 	print('};\n% Orientation\nOrientation = {')
 	for c in cameraList:
 		print('% ' + c.name)
-		c.printOrientation()
+		print(c.getOrientation())
 	print('};')
 
 class CameraPose:
