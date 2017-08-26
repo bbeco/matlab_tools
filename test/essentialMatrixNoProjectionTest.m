@@ -1,23 +1,20 @@
 %% Init
 clear VARIABLES
-imageDir = fullfile('images', 'sfm_test', 'test9', '*.png');
-load(fullfile('images', 'sfm_test', 'test9', 'groundTruth.mat'));
+imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
+load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
 % this is the name of the file used to store the results
 filename = fullfile('..', 'essentialMatrixTest.xlsx');
 imds = imageDatastore(imageDir);
 
 addpath(fullfile('utils'));
 addpath(fullfile('coordinate_transform'));
+addpath(fullfile('ground_truth'));
 usePointProjection = false;
 zMin = 0.037;
 dim = 540;
 repetitions = 30;
 
-for i = 2:size(groundTruthPoses, 1)
-	groundTruthPoses.Orientation{i} = ...
-		groundTruthPoses.Orientation{i}*groundTruthPoses.Orientation{1}';
-end
-groundTruthPoses.Orientation{1} = eye(3, 'double');
+groundTruthPoses = alignOrientation(groundTruthPoses);
 
 % creating ground truth vectors
 [relLocationGT, relOrientationGT] = ...
@@ -45,6 +42,7 @@ orientErrorY = cell(repetitions, numel(images));
 orientErrorZ = cell(repetitions, numel(images));
 matches = cell(repetitions, numel(images));
 frontInliers = cell(repetitions, numel(images));
+validPtsFraction = cell(repetitions, numel(images));
 
 if usePointProjection
 	K = [1, 0, dim/2;
@@ -118,7 +116,7 @@ for j = 1:repetitions
 		indexPairs = matchFeatures(prevFeatures, currFeatures, ...
 			'MaxRatio', .6, 'Unique', true);
 
-		[relOrientation, relLocation, validPtsFraction, inliersIndex, ...
+		[relOrientation, relLocation, validPtsFraction{j, i}, inliersIndex, ...
 			iterations, indexPairs, matches{j, i}, frontInliers{j, i}] = ...
 			helperEstimateRelativePose(prevConversion, currConversion, ...
 			prevFrontIdx, currFrontIdx, indexPairs, cameraParams);
@@ -166,7 +164,8 @@ groundTruthTable = table((1:size(relLocationGT, 1))', relLocationGT, ...
 	orientations2euler(relOrientationGT), ...
 	'VariableNames', {'ViewId', 'Location', 'Orientation'});
 
-estimationDataTable = table((1:repetitions)', matches, frontInliers);
+estimationDataTable = table((1:repetitions)', matches, frontInliers, ...
+	validPtsFraction);
 
 writetable(groundTruthTable, filename, 'Range', 'A2');
 writetable(table((1:repetitions)', locErrorX), filename, 'Range', ...
