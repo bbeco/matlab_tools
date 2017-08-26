@@ -6,11 +6,13 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 
 	removeBackPtsBeforeEestimation = false;
 	removeBackPointsBeforePoseEstimation = true;
+	
+	% Maximum number of trials before giving up with E and pose estimation
 	maxIterations = 100;
 	
-	% this is the minimum number of inliers after E estimation to consider the
-	% pose to be correct.
-	minFrontInliers = 20;
+	% This is the maximum pointsForEestimation/pointsForPoseEstimation ratio
+	% accepted in order to consider a pose estimation valid
+	maxInliersRatio = 15;
 
 	% theese indexes have to be re-arranged with the order given by the
 	% indexPairs vector, then they can be used to select points that belongs to
@@ -63,9 +65,10 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 			return;
 		end
 		
-		% If we get enough inliers from E estimation, the pose is likely to be
-		% correct.
-		if pointsForPoseEstimationCounter >= minFrontInliers
+		% If the following ratio is less than maxInliersRatio, the estimated
+		% pose is considered valid.
+		if pointsForEEstimationCounter / pointsForPoseEstimationCounter <...
+				maxInliersRatio
 			return;
 		end
 	end
