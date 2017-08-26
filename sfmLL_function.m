@@ -1,4 +1,5 @@
-function [vSet, xyzPoints, reprojectionErrors] = ...
+function [vSet, xyzPoints, reprojectionErrors, relLocation, ...
+		relOrientation] = ...
 		sfmLL_function(imageDir, ...
 		computeRelativeScaleBeforeBundleAdjustment, maxAcceptedReprojectionError, ...
 		filterMatches, angularThreshold, ...
@@ -31,8 +32,22 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 	
 	%compute relative motion between each pairs of views to evaluate the
 	%error for each relative pose estimation
+	groundTruthPoses = alignOrientation(groundTruthPoses);
 	[relLocationGT, relOrientationGT] = ...
 		computeRelativeMotion(groundTruthPoses);
+	
+	% Estimated locations and orientations for each pairs
+	relLocation = cell(1, numel(images));
+	relOrientation = cell(1, numel(images));
+	
+	% relative error for each pairs
+	relLocationError = cell(1, numel(images));
+	relOrientation = cell(1, numel(images));
+	
+	% number of points used for E estimation and for pose estimation
+	pointsForEEstimationCounter = cell(1, numel(images));
+	pointsForPoseEstimationCounter = cell(1, numel(images));
+	
 		
 	%% Processing first image
 	% Load first image
@@ -63,7 +78,6 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 	% Create an empty viewSet object to manage the data associated with each
 	% view.
 	vSet = viewSet;
-	relVSet = viewSet;
 
 	% Add the first view. Place the camera associated with the first view
 	% and the origin, oriented along the Z-axis.
@@ -74,9 +88,11 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 		'Orientation', eye(3, 'like', prevPoints.Location), 'Location', ...
 		zeros(1, 3, 'like', prevPoints.Location));
 	
+	relLocation{1} = zeros(1, 3, 'double');
+	relOrientation{1} = eye(3, 'double');
 	
-	relVSet = addView(relVSet, viewId, 'Orientation', eye(3, 'double'), ...
-		'Orientation', eye(3, 'double'));
+	relLocationError{1} = zeros(1, 3, 'double');
+	relOrientationError{1} = zeros(1, 3, 'double');
 	
 	addPoints(vWindow, viewId, prevPoints(prevFrontIndex, :), ...
 		prevFeatures(prevFrontIndex, :), ...
@@ -126,9 +142,25 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 			prevPointsConversion, currPointsConversion, ...
 			prevFrontIndex, currFrontIndex, indexPairs, cameraParams);
 		
-		relLocationGT{i} = relLocationGT{i}/norm(relLocationGT{i});
-		locationError = abs(relLocationGT{i} - relativeLoc)
-		orientationError = abs(rotm2eul(relOrientationGT{i}) - ...
+		% Get the table containing the previous camera pose.
+		prevPose = poses(vSet, i-1);
+		prevOrientation = prevPose.Orientation{1};
+		prevLocation    = prevPose.Location{1};
+		
+		% From the third image on, compute the relative scale
+		if i >= 2 && computeRelativeScaleBeforeBundleAdjustment
+% 			relativeScale = computeRelativeScale(vSet, i, cameraParams, maxAcceptedReprojectionError);
+			relativeScale = computeRelativeScaleFromGroundTruth(...
+				groundTruthPoses, i, i - 1);
+			relativeLoc = relativeScale * relativeLoc;
+		end
+		
+		relLocation{i} = relativeLoc;
+		relOrientation{i} = relativeOrient;
+		
+		relLocationError{i} = abs(relativeLoc - relLocationGT{i})/...
+			norm(relLocationGT{i})
+		relOrientationError{i} = abs(rotm2eul(relOrientationGT{i}) - ...
 			rotm2eul(relativeOrient))*180/pi
 
 % 		disp(['E estimated with ', num2str(iterations), ' interactions']);
@@ -148,26 +180,12 @@ function [vSet, xyzPoints, reprojectionErrors] = ...
 % 		vSet = addConnection(vSet, i - 1, i, 'Matches', ...
 % 			indexPairs(bothFrontIndex, :));
 
-		% Get the table containing the previous camera pose.
-		prevPose = poses(vSet, i-1);
-		prevOrientation = prevPose.Orientation{1};
-		prevLocation    = prevPose.Location{1};
-
 		% Compute the current camera pose in the global coordinate system
 		% relative to the first view.
 		orientation = relativeOrient * prevOrientation;
 		location    = prevLocation + relativeLoc * prevOrientation;
 		vSet = updateView(vSet, i, 'Orientation', orientation, ...
 			'Location', location);
-		
-		% From the third image on, compute the relative scale
-		if i >= 2 && computeRelativeScaleBeforeBundleAdjustment
-% 			relativeScale = computeRelativeScale(vSet, i, cameraParams, maxAcceptedReprojectionError);
-			relativeScale = computeRelativeScaleFromGroundTruth(...
-				groundTruthPoses, i, i - 1);
-			location = prevLocation + relativeScale*relativeLoc*prevOrientation;
-			vSet = updateView(vSet, i, 'Location', location);
-		end
 		
 		relVSet = addView(relVSet, i, 'Orientation', relativeOrient, ...
 			'Location', relativeScale*relativeLoc);

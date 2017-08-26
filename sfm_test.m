@@ -2,8 +2,8 @@ clear VARIABLES;
 addpath('coordinate_transform');
 addpath('utils/');
 addpath('filters/');
-imageDir = fullfile('images', 'sfm_test', 'test5');
-load(fullfile('images', 'sfm_test', 'test5', 'groundTruth.mat'));
+imageDir = fullfile('images', 'sfm_test', 'test8');
+load(fullfile('images', 'sfm_test', 'test8', 'groundTruth.mat'));
 filename = '../test4.xlsx';
 
 % ********** PARAMETERS ************
