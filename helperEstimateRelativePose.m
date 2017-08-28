@@ -51,6 +51,9 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 			% Remove inliers that belongs to the back hemisphere
 			inliersIndex = inliersIndex(frontIdx1 & frontIdx2);
 		end
+		% selecting inliers matches only!
+		indexPairs = indexPairs(inliersIndex, :);
+		
 		disp(['Frontal inliers index: ', num2str(sum(inliersIndex))]);
 
 		% Valid pointsPtsIndex is the fraction of points that reproject in front of

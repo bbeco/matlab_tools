@@ -31,7 +31,7 @@ function [vSet, xyzPoints, reprojectionErrors, relLocation, ...
 	
 	cameraParams = cameraParameters;
 	
-	vWindow = ViewWindow(2);
+	vWindow = ViewWindow(viewsWindowSize);
 	
 	%compute relative motion between each pairs of views to evaluate the
 	%error for each relative pose estimation
@@ -87,9 +87,6 @@ function [vSet, xyzPoints, reprojectionErrors, relLocation, ...
 	
 	relLocation{1} = zeros(1, 3, 'double');
 	relOrientation{1} = eye(3, 'double');
-	
-	relLocationError{1} = zeros(1, 3, 'double');
-	relOrientationError{1} = zeros(1, 3, 'double');
 	
 	addPoints(vWindow, viewId, prevPoints(prevFrontIndex, :), ...
 		prevFeatures(prevFrontIndex, :), ...

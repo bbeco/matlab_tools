@@ -3,14 +3,14 @@ addpath('coordinate_transform');
 addpath('utils/');
 addpath('filters/');
 addpath('ground_truth');
-imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
+imageDir = fullfile('images', 'sfm_test', 'test4', {'ll0.png', 'll1.png'});
 load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
 filename = '../test4.xlsx';
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = false;
-repetitions = 2;
+enableFigures = true;
+repetitions = 1;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 0.8;
@@ -74,7 +74,7 @@ for i = 1:repetitions
 	estLocation = camPoses.Location;
 	estOrientation = camPoses.Orientation;
 	[tmpLocError, tmpOrientError, tmpRelLocError, tmpRelOrientError] = ...
-		computePoseError(estLocation, estOrientation, groundTruthPoses);
+		computePoseError(estLocation, estOrientation, groundTruthPoses, [1 2]);
 		
 	for j = 1:size(camPoses, 1)
 		locError{i, j} = tmpLocError{j};
