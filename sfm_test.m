@@ -9,8 +9,8 @@ filename = '../test4.xlsx';
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = true;
-repetitions = 1;
+enableFigures = false;
+repetitions = 2;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 0.8;
@@ -41,6 +41,7 @@ relOrientationError = cell(repetitions, 1);
 pointsForEEstimationCounter = cell(repetitions, 1);
 pointsForPoseEstimationCounter = cell(repetitions, 1);
 locError = cell(repetitions, c);
+locErrorNorm = zeros(repetitions, c);
 orientError = cell(repetitions, c);
 locXerror = zeros(repetitions, c);
 locYerror = zeros(repetitions, c);
@@ -74,8 +75,9 @@ for i = 1:repetitions
 	for j = 1:size(camPoses, 1)
 		location = camPoses.Location{j};
 		locationGT = groundTruthPoses.Location{j};
-		locError{i, j} = norm(camPoses.Location{j} - ...
-			groundTruthPoses.Location{j});
+		locError{i, j} = camPoses.Location{j} - ...
+			groundTruthPoses.Location{j};
+		locErrorNorm(i, j) = norm(locError{i, j});
 		
 		orientError{i, j} = 180/pi*abs(...
 			rotm2eul(groundTruthPoses.Orientation{j}') -...
@@ -91,10 +93,10 @@ for i = 1:repetitions
 			rotm2eul(relOrientationGT{j}'))*180/pi;
 	end
 	
-	tmp = cat(1, locError);
-	locXerror = tmp(:, 1);
-	locYerror = tmp(:, 2);
-	locZerror = tmp(:, 3);
+	tmp = cat(1, locError{i, :});
+	locXerror(i, :) = tmp(:, 1)';
+	locYerror(i, :) = tmp(:, 2)';
+	locZerror(i, :) = tmp(:, 3)';
 end
 
 orientationGT = 180/pi*orientationGT;
@@ -108,20 +110,73 @@ params = table(repetitions, computeRelativeScaleBeforeBundleAdjustment, ...
 
 writetable(params, filename, 'Range', 'A1');
 
-columnNames = ...
-	{'distance', 'OrientationX_deg', 'orientationY_deg', 'OrientationZ_deg'};
-groundTruthTable = table(distanceGT, ...
-	orientationGT(:, 3), orientationGT(:, 2), orientationGT(:, 3), ...
-	'VariableNames', columnNames);
-writetable(groundTruthTable, filename, 'Range', 'A4');
+tmp = cat(1, groundTruthPoses.Location{:});
 
-base = 4 + c;
-tSize = repetitions + 3;
+%groundTruth locX
+columnNames = ...
+	{'locGTX'};
+groundTruthTable = table(tmp(:, 1)', ...
+	'VariableNames', columnNames);
+writetable(groundTruthTable, filename, 'Range', 'A5');
+
+base = 5;
+tSize = 4;
 tableNumber = 1;
 
+%groundTruth locY
+columnNames = {'locGTY'};
+errorLocationTable = table(tmp(:, 2)', 'VariableNames', ...
+	columnNames);
+writetable(errorLocationTable, filename, 'Range', ...
+	['A', num2str(base + tableNumber*tSize)]);
+
+tableNumber = tableNumber + 1;
+
+%groundTruth locZ
+columnNames = {'locGTZ'};
+errorLocationTable = table(tmp(:, 3)', 'VariableNames', ...
+	columnNames);
+writetable(errorLocationTable, filename, 'Range', ...
+	['A', num2str(base + tableNumber*tSize)]);
+
+tableNumber = tableNumber + 1;
+
+orientationsGT = orientations2euler(groundTruthPoses.Orientation);
+tmp = cat(1, orientationsGT{:});
+
+%groundTruth orientX
+columnNames = {'orientGTX'};
+errorLocationTable = table(tmp(:, 3)', 'VariableNames', ...
+	columnNames);
+writetable(errorLocationTable, filename, 'Range', ...
+	['A', num2str(base + tableNumber*tSize)]);
+
+tableNumber = tableNumber + 1;
+
+%groundTruth orientY
+columnNames = {'orientGTY'};
+errorLocationTable = table(tmp(:, 2)', 'VariableNames', ...
+	columnNames);
+writetable(errorLocationTable, filename, 'Range', ...
+	['A', num2str(base + tableNumber*tSize)]);
+
+tableNumber = tableNumber + 1;
+
+%groundTruth orientZ
+columnNames = {'orientGTZ'};
+errorLocationTable = table(tmp(:, 1)', 'VariableNames', ...
+	columnNames);
+writetable(errorLocationTable, filename, 'Range', ...
+	['A', num2str(base + tableNumber*tSize)]);
+
+tableNumber = tableNumber + 1;
+
+base = base + tableNumber*tSize;
+tSize = repetitions + 3;
+tableNumber = 0;
 %location error
 columnNames = {'repetition', 'locError'};
-errorLocationTable = table((1:repetitions)', locError, 'VariableNames', ...
+errorLocationTable = table((1:repetitions)', locErrorNorm, 'VariableNames', ...
 	columnNames);
 writetable(errorLocationTable, filename, 'Range', ...
 	['A', num2str(base + tableNumber*tSize)]);
@@ -130,7 +185,7 @@ tableNumber = tableNumber + 1;
 
 %angular error X
 errorXtable = table((1:repetitions)', angularXerror, ...
-	'VariableNames', {'repetitions', 'ErrorX_deg'});
+	'VariableNames', {'repetitions', 'orientX_deg'});
 writetable(errorXtable, filename, 'Range', ...
 	['A' num2str(base + tableNumber*tSize)]);
 
@@ -138,7 +193,7 @@ tableNumber = tableNumber + 1;
 
 %angular error Y
 errorYtable = table((1:repetitions)', angularYerror, ...
-	'VariableNames', {'repetitions', 'ErrorY_deg'});
+	'VariableNames', {'repetitions', 'orientY_deg'});
 writetable(errorYtable, filename, 'Range', ...
 	['A' num2str(base + tableNumber*tSize)]);
 
@@ -146,7 +201,7 @@ tableNumber = tableNumber + 1;
 
 %angular error Z
 errorZtable = table((1:repetitions)', angularZerror, ...
-	'VariableNames', {'repetitions', 'ErrorZ_deg'});
+	'VariableNames', {'repetitions', 'orientZ_deg'});
 writetable(errorZtable, filename, 'Range', ...
 	['A' num2str(base + tableNumber*tSize)]);
 
