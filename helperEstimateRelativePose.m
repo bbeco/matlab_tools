@@ -4,8 +4,8 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 	helperEstimateRelativePose(conversion1, conversion2, ...
 	frontIdx1, frontIdx2, indexPairs, cameraParams)
 
-	removeBackPtsBeforeEestimation = false;
-	removeBackPointsBeforePoseEstimation = true;
+	removeBackPtsBeforeEestimation = true;
+	removeBackPointsBeforePoseEstimation = false;
 	
 	% Maximum number of trials before giving up with E and pose estimation
 	maxIterations = 100;
@@ -19,6 +19,8 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 	% the frontal hemisphere before computing the relative camera pose.
 	frontIdx1 = frontIdx1(indexPairs(:, 1));
 	frontIdx2 = frontIdx2(indexPairs(:, 2));
+	
+	disp(['indexPairs size: ', num2str(size(indexPairs, 1))]);
 
 	if removeBackPtsBeforeEestimation
 		indexPairs = indexPairs(frontIdx1 & frontIdx2, :);
@@ -52,8 +54,9 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 			inliersIndex = inliersIndex(frontIdx1 & frontIdx2);
 		end
 		% selecting inliers matches only!
-		indexPairs = indexPairs(inliersIndex, :);
+		indexPairsNoFront = indexPairs(inliersIndex, :);
 		
+		disp(['IndexPairsSize : ', num2str(size(indexPairsNoFront, 1))]);
 		disp(['Frontal inliers index: ', num2str(sum(inliersIndex))]);
 
 		% Valid pointsPtsIndex is the fraction of points that reproject in front of
@@ -72,9 +75,10 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 		% pose is considered valid.
 		if pointsForEEstimationCounter / pointsForPoseEstimationCounter <...
 				maxInliersRatio
+			indexPairs = indexPairsNoFront;
 			return;
 		end
 	end
-	
+	indexPairs = indexPairsNoFront;
 	warning('estimating camera pose: Maximum iterations limit reached');
 end

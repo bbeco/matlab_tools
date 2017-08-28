@@ -1,4 +1,5 @@
-function [pointsConversion, validPoints, frontalPointIndex] = createPointsConversionTable(points, zMin, width, height)
+function [pointsConversion, validPoints, frontalPointIndex] = ...
+		createPointsConversionTable(points, zMin, width, height)
 % This is an alternative way to translate the 3D directions of spherical images.
 % This function divides every 3D points by its z-component so that every key 
 % point is suitable to compute the essential matrix.
@@ -61,7 +62,7 @@ function [pointsConversion, validPoints, frontalPointIndex] = createPointsConver
 		pointsConversion(conversionLength, :) = [x/z y/z];
 		validPoints(i) = true;
 		if z > 0
-			frontalPointIndex(i) = true;
+			frontalPointIndex(conversionLength) = true;
 		end
 	end
 	pointsConversion = pointsConversion(1:conversionLength, :);

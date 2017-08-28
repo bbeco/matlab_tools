@@ -3,7 +3,7 @@ addpath('coordinate_transform');
 addpath('utils/');
 addpath('filters/');
 addpath('ground_truth');
-imageDir = fullfile('images', 'sfm_test', 'test4', {'ll0.png', 'll1.png'});
+imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
 load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
 filename = '../test4.xlsx';
 
@@ -27,7 +27,7 @@ zMin = 0.037;
 prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
 
-performBundleAdjustment = false;
+performBundleAdjustment = true;
 
 % This is the number of views for a keypoint to appear into in order for it to
 % be added in a connection's match.
@@ -58,7 +58,7 @@ groundTruthPoses = alignOrientation(groundTruthPoses);
 
 for i = 1:repetitions
 
-	[vSet, xyzPoints, reprojectionErrors, relLocation, relOrientation, ...
+	[vSet, xyzPoints, reprojectionErrors, ...
 		pointsForEEstimationCounter{i}, ...
 		pointsForPoseEstimationCounter{i}] = ...
 		sfmLL_function(imageDir, ...
@@ -74,7 +74,7 @@ for i = 1:repetitions
 	estLocation = camPoses.Location;
 	estOrientation = camPoses.Orientation;
 	[tmpLocError, tmpOrientError, tmpRelLocError, tmpRelOrientError] = ...
-		computePoseError(estLocation, estOrientation, groundTruthPoses, [1 2]);
+		computePoseError(estLocation, estOrientation, groundTruthPoses);
 		
 	for j = 1:size(camPoses, 1)
 		locError{i, j} = tmpLocError{j};

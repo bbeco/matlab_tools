@@ -36,11 +36,17 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow)
 	
 	% fill the elements right above the diagonal
 	for i = 1:vWindow.WindowSize - 1
-		features1 = vWindow.Views.Features{i};
-		features2 = vWindow.Views.Features{i + 1};
-		matches = matchFeatures(features1, features2, 'Unique', true);
+		vId1 = vWindow.Views.ViewId(i);
+		vId2 = vWindow.Views.ViewId(i + 1);
+		connIdx = getConnectionIndex(vWindow, vId1, vId2);
+		if connIdx <= 0
+			warning(['No correspondences between frame ', num2str(vId1), ...
+				' and frame ', num2str(vId2)]);
+			return;
+		end
+		matches = vWindow.Connections.Matches{connIdx};
 		%matching between features that are present in the previous views too
-		if i > 1
+		if i > 1 && ~isempty(matches)
 			[~, ~, ib] = intersect(correspondences{i - 1, i}(:, 2), ...
 				matches(:, 1));
 			matches = matches(ib, :);
@@ -219,4 +225,23 @@ function matches = getMatches(vSet, vId1, vId2)
 			break;
 		end
 	end
+end
+
+function index = getConnectionIndex(vWindow, viewId1, viewId2)
+% This function looks for an entry in the ViewWindow's connection tables with
+% the given view IDs. If such an entry is found, its index is returned,
+% otherwise -1 is returned.
+	if isempty(vWindow.Connections)
+		index = -1;
+		return;
+	end
+	
+	for i = 1:height(vWindow.Connections)
+		if vWindow.Connections.ViewId1(i) == viewId1 && ...
+				vWindow.Connections.ViewId2(i) == viewId2
+			index = i;
+			return;
+		end
+	end
+	index = -1;
 end

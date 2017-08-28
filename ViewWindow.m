@@ -5,12 +5,14 @@ classdef ViewWindow < handle
 		Views		% table with information for each view
 		WindowSize	% size of the window
 		NumViews
+		Connections % table with inter-views information (matches mainly)
 	end
 	methods
 		function obj=ViewWindow(num)
 			obj.Views = table;
 			obj.WindowSize = num;
 		end
+		
 		function addPoints(obj, viewId, points, features, conversion)
 			
 			view = table(viewId, {points}, {features}, {conversion}, ...
@@ -28,6 +30,21 @@ classdef ViewWindow < handle
 				end
 			end
 		end
+		
+		function addConnection(this, viewId1, viewId2, matches)
+			
+			connection = table(viewId1, viewId2, {matches}, ...
+				{[]}, {[]}, ...
+				'VariableNames', {'ViewId1', 'ViewId2', 'Matches',...
+				'RelativeOrientation', 'RelativeLocation'});
+			
+			if isempty(this.Connections)
+				this.Connections = connection;
+			else
+				this.Connections = [this.Connections; connection];
+			end
+		end
+		
 	end
 			
 end
