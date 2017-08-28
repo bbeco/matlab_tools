@@ -36,8 +36,6 @@ function [vSet, xyzPoints, reprojectionErrors, relLocation, ...
 	%compute relative motion between each pairs of views to evaluate the
 	%error for each relative pose estimation
 	groundTruthPoses = alignOrientation(groundTruthPoses);
-	[relLocationGT, relOrientationGT] = ...
-		computeRelativeMotion(groundTruthPoses);
 	
 	% Estimated locations and orientations for each pairs
 	relLocation = cell(1, numel(images));
@@ -142,6 +140,13 @@ function [vSet, xyzPoints, reprojectionErrors, relLocation, ...
 			prevPointsConversion, currPointsConversion, ...
 			prevFrontIndex, currFrontIndex, indexPairs, cameraParams);
 		
+		% skipping image if we expect the pose estimation to be wrong
+		if pointsForEEstimationCounter(i)/pointsForPoseEstimationCounter(i) >...
+				15
+			warning(['Skipping image ', num2str(i)]);
+			continue;
+		end
+		
 		% Get the table containing the previous camera pose.
 		prevPose = poses(vSet, i-1);
 		prevOrientation = prevPose.Orientation{1};
@@ -166,14 +171,6 @@ function [vSet, xyzPoints, reprojectionErrors, relLocation, ...
 		addPoints(vWindow, i, currPoints(currFrontIndex, :), ...
 			currFeatures(currFrontIndex, :), ...
 			currPointsConversion(currFrontIndex, :));
-		
-		%The following have to be used when helperEstimateEssentialMatrix uses
-		%both back and front key points.
-% 		bothFrontIndex = prevFrontIndex(indexPairs(:, 1)) & ...
-% 			currFrontIndex(indexPairs(:, 2));
-		
-% 		vSet = addConnection(vSet, i - 1, i, 'Matches', ...
-% 			indexPairs(bothFrontIndex, :));
 
 		% Compute the current camera pose in the global coordinate system
 		% relative to the first view.

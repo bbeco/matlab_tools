@@ -61,9 +61,9 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 		pointsForPoseEstimationCounter = ...
 			size(matchedPts1(inliersIndex, :), 1);
 
-		if validPtsFraction > .8
-			return;
-		end
+% 		if validPtsFraction > .8
+% 			return;
+% 		end
 		
 		% If the following ratio is less than maxInliersRatio, the estimated
 		% pose is considered valid.

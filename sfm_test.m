@@ -3,7 +3,7 @@ addpath('coordinate_transform');
 addpath('utils/');
 addpath('filters/');
 addpath('ground_truth');
-imageDir = fullfile('images', 'sfm_test', 'test4');
+imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
 load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
 filename = '../test4.xlsx';
 
@@ -54,8 +54,6 @@ distanceGT = zeros(c, 1);
 orientationGT = zeros(c, 3);
 
 groundTruthPoses = alignOrientation(groundTruthPoses);
-[relLocationGT, relOrientationGT] = ...
-	computeRelativeMotion(groundTruthPoses);
 
 
 for i = 1:repetitions
@@ -72,25 +70,20 @@ for i = 1:repetitions
 
 	[vSet, groundTruthPoses] = normalizeViewSet(vSet, groundTruthPoses);
 	camPoses = poses(vSet);
-	for j = 1:size(camPoses, 1)
-		location = camPoses.Location{j};
-		locationGT = groundTruthPoses.Location{j};
-		locError{i, j} = camPoses.Location{j} - ...
-			groundTruthPoses.Location{j};
-		locErrorNorm(i, j) = norm(locError{i, j});
+	
+	estLocation = camPoses.Location;
+	estOrientation = camPoses.Orientation;
+	[tmpLocError, tmpOrientError, tmpRelLocError, tmpRelOrientError] = ...
+		computePoseError(estLocation, estOrientation, groundTruthPoses);
 		
-		orientError{i, j} = 180/pi*abs(...
-			rotm2eul(groundTruthPoses.Orientation{j}') -...
-			rotm2eul(camPoses.Orientation{j}'));
+	for j = 1:size(camPoses, 1)
+		locError{i, j} = tmpLocError{j};
+		locErrorNorm(i, j) = norm(locError{i, j});
 
+		orientError{i, j} = 180/pi*tmpOrientError{j};
 		angularZerror(i, j) = orientError{i, j}(1);
 		angularYerror(i, j) = orientError{i, j}(2);
 		angularXerror(i, j) = orientError{i, j}(3);
-		
-		relLocationError{i, j} = abs(relLocation{j} - relLocationGT{j})/...
-			norm(relLocationGT{j});
-		relOrientationError{i, j} = abs(rotm2eul(relOrientation{j}') - ...
-			rotm2eul(relOrientationGT{j}'))*180/pi;
 	end
 	
 	tmp = cat(1, locError{i, :});
