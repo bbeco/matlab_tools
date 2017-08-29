@@ -3,14 +3,15 @@ addpath('coordinate_transform');
 addpath('utils/');
 addpath('filters/');
 addpath('ground_truth');
-imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
-load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
+% imageDir = fullfile('images', 'sfm_test', 'test8', {'ll00.png', 'll01.png', 'll02.png', 'll03.png', 'll04.png', 'll05.png', 'll06.png', 'll07.png'});
+imageDir = fullfile('images', 'sfm_test', 'test8', '*.png');
+load(fullfile('images', 'sfm_test', 'test8', 'groundTruth.mat'));
 filename = '../test4.xlsx';
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = true;
-repetitions = 1;
+enableFigures = false;
+repetitions = 30;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 0.8;
@@ -27,7 +28,8 @@ zMin = 0.037;
 prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
 
-performBundleAdjustment = false;
+performGlobalBundleAdjustment = false;
+performWindowedBundleAdjustment = false;
 
 % This is the number of views for a keypoint to appear into in order for it to
 % be added in a connection's match.
@@ -35,11 +37,14 @@ viewsWindowSize = 2;
 % **********************************
 
 imds = imageDatastore(imageDir);
-c = numel(imds.Files);
+% c = numel(imds.Files);
+%The following is the actual number of images processed
+c = 8;
 relLocationError = cell(repetitions, 1);
 relOrientationError = cell(repetitions, 1);
 pointsForEEstimationCounter = cell(repetitions, 1);
 pointsForPoseEstimationCounter = cell(repetitions, 1);
+trackSize = cell(repetitions, 1);
 locError = cell(repetitions, c);
 locErrorNorm = zeros(repetitions, c);
 orientError = cell(repetitions, c);
@@ -60,13 +65,14 @@ for i = 1:repetitions
 
 	[vSet, xyzPoints, reprojectionErrors, ...
 		pointsForEEstimationCounter{i}, ...
-		pointsForPoseEstimationCounter{i}] = ...
+		pointsForPoseEstimationCounter{i}, trackSize{i}] = ...
 		sfmLL_function(imageDir, ...
 		computeRelativeScaleBeforeBundleAdjustment, ...
 		maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
 		zMin, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, ...
-		performBundleAdjustment, viewsWindowSize, groundTruthPoses);
+		performGlobalBundleAdjustment, performWindowedBundleAdjustment, ...
+		viewsWindowSize, groundTruthPoses, c);
 
 	[vSet, groundTruthPoses] = normalizeViewSet(vSet, groundTruthPoses);
 	camPoses = poses(vSet);
@@ -74,7 +80,7 @@ for i = 1:repetitions
 	estLocation = camPoses.Location;
 	estOrientation = camPoses.Orientation;
 	[tmpLocError, tmpOrientError, tmpRelLocError, tmpRelOrientError] = ...
-		computePoseError(estLocation, estOrientation, groundTruthPoses);
+		computePoseError(estLocation, estOrientation, groundTruthPoses, 1:c);
 		
 	for j = 1:size(camPoses, 1)
 		locError{i, j} = tmpLocError{j};
@@ -213,6 +219,14 @@ writetable(...
 	table(...
 	(1:repetitions)', pointsForPoseEstimationCounter, ...
 	'VariableNames', {'repetitions', 'pointsForPoseEstimation'}), ...
+	filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
+
+tableNumber = tableNumber + 1;
+
+writetable(...
+	table(...
+	(1:repetitions)', trackSize, ...
+	'VariableNames', {'repetitions', 'trackSize'}), ...
 	filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
 
 tableNumber = tableNumber + 1;

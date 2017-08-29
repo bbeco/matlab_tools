@@ -1,12 +1,13 @@
 function [vSet, xyzPoints, reprojectionErrors, ...
 		pointsForEEstimationCounter, ...
-		pointsForPoseEstimationCounter] = ...
+		pointsForPoseEstimationCounter, tracksSize] = ...
 		sfmLL_function(imageDir, ...
 		computeRelativeScaleBeforeBundleAdjustment, maxAcceptedReprojectionError, ...
 		filterMatches, angularThreshold, ...
 		zMin, ...
-		prefilterLLKeyPoints, maxLatitudeAngle, performBundleAdjustment, ...
-		viewsWindowSize, groundTruthPoses)
+		prefilterLLKeyPoints, maxLatitudeAngle, ...
+		performGlobalBundleAdjustment, performWindowedBundleAdjustment, ...
+		viewsWindowSize, groundTruthPoses, imgNumber)
 	
 	addpath(fullfile('ground_truth'));
 	imds = imageDatastore(imageDir);
@@ -41,7 +42,10 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	pointsForEEstimationCounter = zeros(numel(images), 1);
 	pointsForPoseEstimationCounter = zeros(numel(images), 1);
 	
-		
+	% This store the number of pointTracks found for every windowed bundle
+	% adjustment. This vector is oversized because it is simpler to update it
+	tracksSize = zeros(1, imgNumber);
+	
 	%% Processing first image
 	% Load first image
 	disp('Processing image 1');
@@ -86,7 +90,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		prevPointsConversion);
 
 	%% Processing all the other images
-	for i = 2:numel(images)
+	for i = 2:imgNumber
 		disp(['Processing image ', num2str(i)]);
 		% Undistort the current image.
 		I = images{i};
@@ -123,7 +127,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		% The pose is computed up to scale, meaning that the distance between
 		% the cameras in the previous view and the current view is set to 1.
 		% This will be corrected by the bundle adjustment.
-		[relativeOrient, relativeLoc, ~, inliersIdx, iterations, ...
+		[relativeOrient, relativeLoc, validPtsFraction, inliersIdx, iterations, ...
 			indexPairs, pointsForEEstimationCounter(i), ...
 			pointsForPoseEstimationCounter(i)] = ...
 			helperEstimateRelativePose(...
@@ -132,7 +136,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		
 		% skipping image if we expect the pose estimation to be wrong
 		if pointsForEEstimationCounter(i)/pointsForPoseEstimationCounter(i) >...
-				15
+				10 || validPtsFraction < .8
 			warning(['Skipping image ', num2str(i)]);
 			continue;
 		end
@@ -170,26 +174,28 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		
 		if i >= vWindow.WindowSize
 			vSet = computeTrackAndCreateConnections(vSet, vWindow);
-		end
 
-		% Find point tracks across all views.
-		tracks = findTracks(vSet);
+			if performWindowedBundleAdjustment
+				% Find point tracks across all views.
+				tracks = findTracks(vSet, vWindow.Views.ViewId);
+				
+				tracksSize(i) = length(tracks);
 
-		% Get the table containing camera poses for all views.
-		camPoses = poses(vSet);
+				% Get the table containing camera poses for all views.
+				camPoses = poses(vSet, vWindow.Views.ViewId);
 
-		% Triangulate initial locations for the 3-D world points.
-		[xyzPoints, reprojectionErrors] = triangulateMultiview(tracks, ...
-			camPoses, cameraParams);
+				% Triangulate initial locations for the 3-D world points.
+				[xyzPoints, reprojectionErrors] = triangulateMultiview(tracks, ...
+					camPoses, cameraParams);
 
-		% Refine the 3-D world points and camera poses.
-		if performBundleAdjustment
-			[xyzPoints, camPoses, reprojectionErrors] = ...
-				bundleAdjustment(xyzPoints, tracks, camPoses, ...
-				cameraParams, 'FixedViewId', 1, 'PointsUndistorted', true);
-			
-			% Store the refined camera poses.
-			vSet = updateView(vSet, camPoses);
+				% Refine the 3-D world points and camera poses.
+				[xyzPoints, camPoses, reprojectionErrors] = ...
+					bundleAdjustment(xyzPoints, tracks, camPoses, ...
+					cameraParams, 'FixedViewId', 1, 'PointsUndistorted', true);
+
+				% Store the refined camera poses.
+				vSet = updateView(vSet, camPoses);
+			end
 		end
 
 		prevFeatures = currFeatures;
@@ -197,4 +203,24 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		prevPointsConversion = currPointsConversion;
 		prevFrontIndex = currFrontIndex;
 	end
+	
+	% Find point tracks across all views.
+	tracks = findTracks(vSet);
 
+	% Get the table containing camera poses for all views.
+	camPoses = poses(vSet);
+
+	% Triangulate initial locations for the 3-D world points.
+	[xyzPoints, reprojectionErrors] = triangulateMultiview(tracks, ...
+		camPoses, cameraParams);
+
+	% Refine the 3-D world points and camera poses.
+	if performGlobalBundleAdjustment
+		[xyzPoints, camPoses, reprojectionErrors] = ...
+			bundleAdjustment(xyzPoints, tracks, camPoses, ...
+			cameraParams, 'FixedViewId', 1, 'PointsUndistorted', true);
+
+		% Store the refined camera poses.
+		vSet = updateView(vSet, camPoses);
+	end
+end
