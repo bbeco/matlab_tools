@@ -4,15 +4,15 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 	helperEstimateRelativePose(conversion1, conversion2, ...
 	frontIdx1, frontIdx2, indexPairs, cameraParams)
 
-	removeBackPtsBeforeEestimation = true;
-	removeBackPointsBeforePoseEstimation = false;
+	removeBackPtsBeforeEestimation = false;
+	removeBackPointsBeforePoseEstimation = true;
 	
 	% Maximum number of trials before giving up with E and pose estimation
 	maxIterations = 100;
 	
 	% This is the maximum pointsForEestimation/pointsForPoseEstimation ratio
 	% accepted in order to consider a pose estimation valid
-	maxInliersRatio = 15;
+	maxInliersRatio = 10;
 
 	% theese indexes have to be re-arranged with the order given by the
 	% indexPairs vector, then they can be used to select points that belongs to
@@ -51,7 +51,7 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 % 		disp(['Inliers Index: ', num2str(sum(inliersIndex))]);
 		if removeBackPointsBeforePoseEstimation
 			% Remove inliers that belongs to the back hemisphere
-			inliersIndex = inliersIndex(frontIdx1 & frontIdx2);
+			inliersIndex = inliersIndex & frontIdx1' & frontIdx2';
 		end
 		% selecting inliers matches only!
 		indexPairsNoFront = indexPairs(inliersIndex, :);
@@ -65,16 +65,14 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 			cameraParams, ...
 			matchedPts1(inliersIndex, :), matchedPts2(inliersIndex, :));
 		pointsForPoseEstimationCounter = ...
-			size(matchedPts1(inliersIndex, :), 1);
-
-% 		if validPtsFraction > .8
-% 			return;
-% 		end
+			sum(inliersIndex, 1);
 		
-		% If the following ratio is less than maxInliersRatio, the estimated
-		% pose is considered valid.
+		% If the following ratio is less than maxInliersRatio and the valid
+		% points fraction is above .8, the estimated pose is likely to be
+		% correct
 		if pointsForEEstimationCounter / pointsForPoseEstimationCounter <...
-				maxInliersRatio
+				maxInliersRatio && ...
+				validPtsFraction > .8
 			indexPairs = indexPairsNoFront;
 			return;
 		end

@@ -17,11 +17,8 @@ repetitions = 30;
 groundTruthPoses = alignOrientation(groundTruthPoses);
 
 % creating ground truth vectors
-[relLocationGT, relOrientationGT] = ...
+relativeGT = ...
 	computeRelativeMotion(groundTruthPoses);
-relativeGT = table((1:size(groundTruthPoses, 1))', relLocationGT, ...
-	relOrientationGT, ...
-	'VariableNames', {'ViewId', 'Location', 'Orientation'});
 
 
 % Convert the images to grayscale.
@@ -121,7 +118,7 @@ for j = 1:repetitions
 			helperEstimateRelativePose(prevConversion, currConversion, ...
 			prevFrontIdx, currFrontIdx, indexPairs, cameraParams);
 		
-		scale = norm(relLocationGT{i})/norm(relLocation);
+		scale = norm(relativeGT.Location{i})/norm(relLocation);
 
 % 		orientError = abs(rotm2eul(relOrientation) - ...
 % 			relOrientationGT{i})*180/pi;
@@ -146,7 +143,7 @@ for j = 1:repetitions
 		prevFrontIdx = currFrontIdx;
 	end
 	
-	[locError, orientError] = computePoseError(location, orientation, ...
+	[locError, orientError, ~, ~] = computePoseError(location, orientation, ...
 		relativeGT);
 	
 	tmp = cat(1, locError{:});
@@ -160,12 +157,15 @@ for j = 1:repetitions
 end
 
 %% Write results
-groundTruthTable = table((1:size(relLocationGT, 1))', relLocationGT, ...
-	orientations2euler(relOrientationGT), ...
-	'VariableNames', {'ViewId', 'Location', 'Orientation'});
+len = size(relativeGT.Orientation, 1);
+relativeGTOrientationDegrees = cell(len, 1);
+for i = 1:len
+	relativeGTOrientationDegrees{i} = 180/pi*rotm2eul(relativeGT.Orientation{i}');
+end
 
-estimationDataTable = table((1:repetitions)', matches, frontInliers, ...
-	validPtsFraction);
+groundTruthTable = table(relativeGT.ViewId, relativeGT.Location, ...
+	relativeGTOrientationDegrees, ...
+	'VariableNames', {'ViewId', 'Location', 'Orientation'});
 
 writetable(groundTruthTable, filename, 'Range', 'A2');
 writetable(table((1:repetitions)', locErrorX), filename, 'Range', ...
@@ -183,5 +183,14 @@ writetable(table((1:repetitions)', orientErrorZ), filename, 'Range', ...
 	['A', num2str(5*(repetitions + 3) + base)]);
 
 
+estimationDataTable = table((1:repetitions)', matches);
 writetable(estimationDataTable, filename, 'Range', ...
 	['A', num2str(6*(repetitions + 3) + base)]);
+
+estimationDataTable = table((1:repetitions)', frontInliers);
+writetable(estimationDataTable, filename, 'Range', ...
+	['A', num2str(7*(repetitions + 3) + base)]);
+
+estimationDataTable = table((1:repetitions)', validPtsFraction);
+writetable(estimationDataTable, filename, 'Range', ...
+	['A', num2str(8*(repetitions + 3) + base)]);

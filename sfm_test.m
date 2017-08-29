@@ -27,7 +27,7 @@ zMin = 0.037;
 prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
 
-performBundleAdjustment = true;
+performBundleAdjustment = false;
 
 % This is the number of views for a keypoint to appear into in order for it to
 % be added in a connection's match.
