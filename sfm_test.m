@@ -6,7 +6,7 @@ addpath('ground_truth');
 % imageDir = fullfile('images', 'sfm_test', 'test8', {'ll00.png', 'll01.png', 'll02.png', 'll03.png', 'll04.png', 'll05.png', 'll06.png', 'll07.png'});
 imageDir = fullfile('images', 'sfm_test', 'test8', '*.png');
 load(fullfile('images', 'sfm_test', 'test8', 'groundTruth.mat'));
-filename = '../test4.xlsx';
+filename = '../test2_noBundle.xlsx';
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
@@ -39,7 +39,7 @@ viewsWindowSize = 2;
 imds = imageDatastore(imageDir);
 % c = numel(imds.Files);
 %The following is the actual number of images processed
-c = 8;
+c = 20;
 relLocationError = cell(repetitions, 1);
 relOrientationError = cell(repetitions, 1);
 pointsForEEstimationCounter = cell(repetitions, 1);
@@ -63,6 +63,8 @@ groundTruthPoses = alignOrientation(groundTruthPoses);
 
 for i = 1:repetitions
 
+	display(['Repetition: ', num2str(i)]);
+	
 	[vSet, xyzPoints, reprojectionErrors, ...
 		pointsForEEstimationCounter{i}, ...
 		pointsForPoseEstimationCounter{i}, trackSize{i}] = ...
@@ -79,7 +81,7 @@ for i = 1:repetitions
 	
 	estLocation = camPoses.Location;
 	estOrientation = camPoses.Orientation;
-	[tmpLocError, tmpOrientError, tmpRelLocError, tmpRelOrientError] = ...
+	[tmpLocError, tmpOrientError, ~, ~] = ...
 		computePoseError(estLocation, estOrientation, groundTruthPoses, 1:c);
 		
 	for j = 1:size(camPoses, 1)
@@ -104,8 +106,8 @@ orientationGT = 180/pi*orientationGT;
 params = table(repetitions, computeRelativeScaleBeforeBundleAdjustment, ...
 	maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
 	zMin,...
-	prefilterLLKeyPoints, maxLatitudeAngle, performBundleAdjustment, ...
-	viewsWindowSize);
+	prefilterLLKeyPoints, maxLatitudeAngle, performGlobalBundleAdjustment, ...
+	performWindowedBundleAdjustment, viewsWindowSize);
 
 writetable(params, filename, 'Range', 'A1');
 

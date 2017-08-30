@@ -56,6 +56,10 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 		% selecting inliers matches only!
 		indexPairsNoFront = indexPairs(inliersIndex, :);
 		
+		if sum(inliersIndex) == 0
+			continue;
+		end
+		
 		disp(['Frontal inliers index: ', num2str(sum(inliersIndex))]);
 
 		% Valid pointsPtsIndex is the fraction of points that reproject in front of

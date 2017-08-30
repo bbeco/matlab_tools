@@ -38,8 +38,9 @@ function [locError, orientError, relLocError, relOrientError] = ...
 		currLocGT = groundTruth.Location{i};
 		currOrientGT = groundTruth.Orientation{i};
 
-		orientError{i} = rotm2eul(currOrientGT') - rotm2eul(estOrientation{i}');
-		locError{i} = currLocGT - estLocation{i};
+		orientError{i} = abs(...
+			rotm2eul(currOrientGT') - rotm2eul(estOrientation{i}'));
+		locError{i} = abs(currLocGT - estLocation{i});
 		
 		relLocGT = relPosesGT.Location{i};
 		relOrientGT = relPosesGT.Orientation{i};
