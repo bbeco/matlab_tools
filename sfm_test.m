@@ -6,7 +6,7 @@ addpath('ground_truth');
 % imageDir = fullfile('images', 'sfm_test', 'test8', {'ll00.png', 'll01.png', 'll02.png', 'll03.png', 'll04.png', 'll05.png', 'll06.png', 'll07.png'});
 imageDir = fullfile('images', 'sfm_test', 'test8', '*.png');
 load(fullfile('images', 'sfm_test', 'test8', 'groundTruth.mat'));
-filename = '../test2_noBundle.xlsx';
+filename = '../test2_Window7.xlsx';
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
@@ -28,12 +28,12 @@ zMin = 0.037;
 prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
 
-performGlobalBundleAdjustment = false;
-performWindowedBundleAdjustment = false;
+performGlobalBundleAdjustment = true;
+performWindowedBundleAdjustment = true;
 
 % This is the number of views for a keypoint to appear into in order for it to
 % be added in a connection's match.
-viewsWindowSize = 2;
+viewsWindowSize = 7;
 % **********************************
 
 imds = imageDatastore(imageDir);
