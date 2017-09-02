@@ -1,7 +1,12 @@
-function [locError, orientError, relLocError, relOrientError] = ...
-	computePoseError(estLocation, estOrientation, groundTruth, vIds)
+function [locError, orientError] = ...
+	computePoseError(estLocation, estOrientation, groundTruth, ...
+	computeRelativeErrors, vIds)
+% This function compute the absolute value of the error for both location and
+% orientation. The location error is the euclidean distance between the
+% estimated pose and the relative ground truth while the orientation error is
+% returned as the angular error around the three axis XYZ.
 
-	if nargin < 4
+	if nargin < 5
 		vIds = groundTruth.ViewId;
 	else
 		len = length(vIds);
@@ -19,35 +24,24 @@ function [locError, orientError, relLocError, relOrientError] = ...
 	
 	len = size(estLocation, 1);
 	
-	locError = cell(len, 1);
-	orientError = cell(len, 1);
-	relLocError = cell(len, 1);
-	relOrientError = cell(len, 1);
+	locError = zeros(len, 1);
+	orientError = zeros(len, 3);
 	
 	% If the GT's first camera orientation is different from eye(3), re-align
 	% every GT's camera orientation.
 	groundTruth = alignOrientation(groundTruth);
 	
-	relPosesGT = computeRelativeMotion(groundTruth);
-	
-	relPoses = computeRelativeMotion(...
-			table((1:len)', estLocation, estOrientation,...
-			'VariableNames', {'ViewId', 'Location', 'Orientation'}));
-	
 	for i = 1:len
 		currLocGT = groundTruth.Location{i};
-		currOrientGT = groundTruth.Orientation{i};
+		currOrientGT = rotm2eul(groundTruth.Orientation{i}');
 
-		orientError{i} = abs(...
-			rotm2eul(currOrientGT') - rotm2eul(estOrientation{i}'));
-		locError{i} = abs(currLocGT - estLocation{i});
+		orientError(i, :) = abs(...
+			currOrientGT - rotm2eul(estOrientation{i}'));
+		locError(i) = norm(currLocGT - estLocation{i});
 		
-		relLocGT = relPosesGT.Location{i};
-		relOrientGT = relPosesGT.Orientation{i};
-
-		relLocError{i} = relLocGT - relPoses.Location{i};
-		relOrientError{i} = rotm2eul(relOrientGT') - ...
-			rotm2eul(relPoses.Orientation{i}');
+		if computeRelativeErrors
+			locError(i) = locError(i)/norm(currLocGT);
+		end
 	end
 end
 

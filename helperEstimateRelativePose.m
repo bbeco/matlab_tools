@@ -2,13 +2,19 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 	i, indexPairs, pointsForEEstimationCounter, ...
 	pointsForPoseEstimationCounter] = ...
 	helperEstimateRelativePose(conversion1, conversion2, ...
-	frontIdx1, frontIdx2, indexPairs, cameraParams)
+	frontIdx1, frontIdx2, indexPairs, cameraParams, maxNumTrials, maxIterations)
 
 	removeBackPtsBeforeEestimation = false;
 	removeBackPointsBeforePoseEstimation = true;
 	
 	% Maximum number of trials before giving up with E and pose estimation
-	maxIterations = 100;
+	if narging < 8
+	 	maxIterations = 100;
+	end
+	
+	if narging < 7
+		maxNumTrials = 50000;
+	end
 	
 	% This is the maximum pointsForEestimation/pointsForPoseEstimation ratio
 	% accepted in order to consider a pose estimation valid
@@ -36,7 +42,7 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 		% inliersIndex is a logical vector with the points that satisfy the
 		% epipolar constraint.
 		[E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1,...
-			matchedPts2, cameraParams, 'MaxNumTrials', 50000, ...
+			matchedPts2, cameraParams, 'MaxNumTrials', maxNumTrials, ...
 			'MaxDistance', 0.0001);
 
 		if status ~= 0
@@ -56,7 +62,7 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 		% selecting inliers matches only!
 		indexPairsNoFront = indexPairs(inliersIndex, :);
 		
-		if sum(inliersIndex) == 0
+		if sum(inliersIndex) == 0 && i < maxIterations
 			continue;
 		end
 		

@@ -212,6 +212,8 @@ addConnection(vWindow, 1, 2, [1, 1]);
 % View 3
 vSet = addView(vSet, 3, 'Points', [3 3; 5 5], 'Orientation', eye(3), 'Location', [0 0 0]);
 addPoints(vWindow, 3, [3 3], f2, [5 5]);
+% The following match is wrong but this is exactly what this case is designed
+% for. This is a match that does not satisfy the track consistency check
 addConnection(vWindow, 2, 3, [1, 1]);
 
 % View 4
