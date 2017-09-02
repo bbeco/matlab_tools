@@ -7,7 +7,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		zMin, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, ...
 		performGlobalBundleAdjustment, performWindowedBundleAdjustment, ...
-		viewsWindowSize, groundTruthPoses, imgNumber)
+		viewsWindowSize, groundTruthPoses, imgNumber, absoluteTolerance)
 	
 	addpath(fullfile('ground_truth'));
 	imds = imageDatastore(imageDir);
@@ -150,7 +150,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		if i >= 2 && computeRelativeScaleBeforeBundleAdjustment
 % 			relativeScale = computeRelativeScale(vSet, i, cameraParams, maxAcceptedReprojectionError);
 			relativeScale = computeRelativeScaleFromGroundTruth(...
-				groundTruthPoses, i, i - 1);
+				groundTruthPoses, relativeLoc, i, i - 1);
 			relativeLoc = relativeScale * relativeLoc;
 		end
 
@@ -173,7 +173,8 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 			'Location', location);
 		
 		if i >= vWindow.WindowSize
-			vSet = computeTrackAndCreateConnections(vSet, vWindow);
+			vSet = addConnection(vSet, i - 1, i, 'Matches', indexPairs);
+			%vSet = computeTrackAndCreateConnections(vSet, vWindow);
 
 			if performWindowedBundleAdjustment
 				% Find point tracks across all views.
@@ -218,7 +219,8 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	if performGlobalBundleAdjustment
 		[xyzPoints, camPoses, reprojectionErrors] = ...
 			bundleAdjustment(xyzPoints, tracks, camPoses, ...
-			cameraParams, 'FixedViewId', 1, 'PointsUndistorted', true);
+			cameraParams, 'FixedViewId', 1, 'PointsUndistorted', true, ...
+			'Verbose', true, 'AbsoluteTolerance', absoluteTolerance);
 
 		% Store the refined camera poses.
 		vSet = updateView(vSet, camPoses);

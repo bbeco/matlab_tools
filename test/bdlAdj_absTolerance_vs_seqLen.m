@@ -1,27 +1,26 @@
 clear VARIABLES;
-addpath('coordinate_transform');
-addpath('utils/');
-addpath('filters/');
-addpath('ground_truth');
-addpath(fullfile('data_analysis'));
-addpath(fullfile('plot'));
-% imageDir = fullfile('images', 'sfm_test', 'test8', {'ll00.png', 'll01.png', 'll02.png', 'll03.png', 'll04.png', 'll05.png', 'll06.png', 'll07.png'});
+addpath(fullfile('..', 'coordinate_transform'));
+addpath(fullfile('..', 'utils/'));
+addpath(fullfile('..', 'filters/'));
+addpath(fullfile('..', 'ground_truth'));
+addpath(fullfile('..', 'data_analysis'));
+addpath(fullfile('..', 'plot'));
 imageDir = fullfile('images', 'sfm_test', 'test8', '*.png');
 load(fullfile('images', 'sfm_test', 'test8', 'groundTruth.mat'));
 filename = '../test2_nobundle.xlsx';
 
+resultsBaseFolder = fullfile('..', '..', 'results', 'bdlAdj_absTolerance_vs_seqLen');
 paramTable = table(...
-	{'at 1e-01'; 'at 1e-02'; 'at 1e-03'; 'at 1e-04'; 'at 1e-05';'at 1e-06'}, ...
-	{fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-01.xlsx');
-	fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-02.xlsx');
-	fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-03.xlsx'); 
-	fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-04.xlsx');
-	fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-05.xlsx');
-	fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-06.xlsx')}, ...
-	{true; true; true; true; true; true}, {false; false; false; false; false; false}, ...
-	[2; 2; 2; 2; 2; 2], [1e-01; 1e-02; 1e-03; 1e-04; 1e-05; 1e-06], ...
-	'VariableNames', {'DataSeriesName', 'OutputFileName', 'GlobalBundleAdjustment', ...
-	'WindowedBundleAdjustment', 'WindowSize', 'AbsoluteTolerance'});
+	{'at 1e-02'; 'at 1e-03'; 'at 1e-04'; 'at 1e-05';}, ...
+	{[resultsBaseFolder, '/at_1e-02.xlsx'];
+	[resultsBaseFolder, '/at_1e-03.xlsx'];
+	[resultsBaseFolder, '/at_1e-04.xlsx']; 
+	[resultsBaseFolder, '/at_1e-05.xlsx']}, ...
+	[1e-02; 1e-03; 1e-04; 1e-05], ...
+	'VariableNames', {'DataSeriesName', 'OutputFileName', 'AbsoluteTolerance'});
+
+% the sequence length values
+seqLength = [3:7, 10, 20];
 
 for i = 1:height(paramTable)
 	if exist(paramTable.OutputFileName{i}, 'file')
@@ -53,8 +52,6 @@ maxLatitudeAngle = 60; %degrees
 
 imds = imageDatastore(imageDir);
 % c = numel(imds.Files);
-%The following is the actual number of images processed
-c = 10;
 relLocationError = cell(repetitions, 1);
 relOrientationError = cell(repetitions, 1);
 pointsForEEstimationCounter = cell(repetitions, 1);
@@ -68,6 +65,11 @@ locZerror = zeros(repetitions, c);
 angularXerror = zeros(repetitions, c);
 angularYerror = zeros(repetitions, c);
 angularZerror = zeros(repetitions, c);
+
+sumLocError = zeros(size(paramTable, 1), size(seqLength, 2));
+sumOrientErrorX = zeros(size(paramTable, 1), size(seqLength, 2));
+sumOrientErrorY = zeros(size(paramTable, 1), size(seqLength, 2));
+sumOrientErrorZ = zeros(size(paramTable, 1), size(seqLength, 2));
 
 distanceGT = zeros(c, 1);
 orientationGT = zeros(c, 3);
@@ -84,39 +86,45 @@ resultCItable = repmat(resultCItable, height(paramTable), 1);
 for k = 1:height(paramTable)
 	% Setting same seed for each experiment
 	rng('default');
+	for c = seqLength
 	
-	for i = 1:repetitions
+		for i = 1:repetitions
 
-		display(['Experiment: ', num2str(k)]);
-		display(['Repetition: ', num2str(i)]);
+			display(['Experiment: ', num2str(k)]);
+			display(['Repetition: ', num2str(i)]);
 
-		[vSet, xyzPoints, reprojectionErrors, ...
-			pointsForEEstimationCounter{i}, ...
-			pointsForPoseEstimationCounter{i}, trackSize{i}] = ...
-			sfmLL_function(imageDir, ...
-			computeRelativeScaleBeforeBundleAdjustment, ...
-			maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
-			zMin, ...
-			prefilterLLKeyPoints, maxLatitudeAngle, ...
-			paramTable.GlobalBundleAdjustment{k}, paramTable.WindowedBundleAdjustment{k}, ...
-			paramTable.WindowSize(k), groundTruthPoses, c, paramTable.AbsoluteTolerance(k));
+			[vSet, xyzPoints, reprojectionErrors, ...
+				~, ...
+				~, ~] = ...
+				sfmLL_function(imageDir, ...
+				computeRelativeScaleBeforeBundleAdjustment, ...
+				maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
+				zMin, ...
+				prefilterLLKeyPoints, maxLatitudeAngle, ...
+				true, false, ...
+				2, groundTruthPoses, c, paramTable.AbsoluteTolerance(k));
 
-		[vSet, groundTruthPoses] = normalizeViewSet(vSet, groundTruthPoses);
-		camPoses = poses(vSet);
+			[vSet, groundTruthPoses] = normalizeViewSet(vSet, groundTruthPoses);
+			camPoses = poses(vSet);
 
-		estLocation = camPoses.Location;
-		estOrientation = camPoses.Orientation;
-		[tmpLocError, tmpOrientError] = ...
-			computePoseError(estLocation, estOrientation, groundTruthPoses, ...
-			false, 1:c);
+			estLocation = camPoses.Location;
+			estOrientation = camPoses.Orientation;
+			[tmpLocError, tmpOrientError] = ...
+				computePoseError(estLocation, estOrientation, groundTruthPoses, ...
+				false, 1:c);
 
-		locError(i, :) = tmpLocError';
-		for j = 1:size(camPoses, 1)
-			orientError{i, j} =tmpOrientError(j, :);
-			angularZerror(i, j) = orientError{i, j}(1);
-			angularYerror(i, j) = orientError{i, j}(2);
-			angularXerror(i, j) = orientError{i, j}(3);
+			locError(i, :) = tmpLocError';
+			for j = 1:size(camPoses, 1)
+				orientError{i, j} =tmpOrientError(j, :);
+				angularZerror(i, j) = orientError{i, j}(1);
+				angularYerror(i, j) = orientError{i, j}(2);
+				angularXerror(i, j) = orientError{i, j}(3);
+			end
 		end
+		sumLocationError = sum(mean(locError, 1));
+		sumOrientationErrorX = sum(mean(angularXerror, 1));
+		sumOrientationErrorY = sum(mean(angularYerror, 1));
+		sumOrientationErrorZ = sum(mean(angularZerror, 1));
 	end
 
 	orientationGT = 180/pi*orientationGT;
