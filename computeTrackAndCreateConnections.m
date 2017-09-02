@@ -28,7 +28,8 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow)
 %	You should have received a copy of the GNU Lesser General Public License
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	correspondences = cell(vWindow.WindowSize - 1);
+	correspondences = cell(vWindow.WindowSize - 1, vWindow.WindowSize);
+	goodMatches = cell(size(correspondences));
 
 	%This creates a table with all the mathces among every view contained
 	%in the window. Only the upper left triangle block is relevant since
@@ -63,90 +64,65 @@ function vSet = computeTrackAndCreateConnections(vSet, vWindow)
 	
 	% fill all remainin elements
 	for i = 1:vWindow.WindowSize - 1
-		for j = (i + 2):vWindow.WindowSize
-			for k = 1:size(correspondences{i, j - 1})
-				idx = findMatchingFeatureIndex(correspondences, i, j, ...
-					correspondences{i, j - 1}(k, 1));
-				if idx > 0
-					correspondences{i, j}(end + 1, :) = ...
-						[correspondences{i, j - 1}(k, 1), idx];
-				else
-					continue;
-				end
-			end
-			if isempty(correspondences{i, j})
-				id1 = vWindow.Views.ViewId(i);
-				id2 = vWindow.Views.ViewId(j);
-				warning(['No correspondences between frame ', num2str(id1), ...
-					' and frame ', num2str(id2)]);
-				return;
-			end
-		end
-	end
-			
-	
-	goodMatches = cell(size(correspondences));
-	for i = 1:vWindow.WindowSize - 1
-		len = size(correspondences{i, i + 1}, 1);
-% 		if len < 1
-% 			% It means we have just found two consecutive views without
-% 			% any matches.
-% 			id1 = vWindow.Views.ViewId(i);
-% 			id2 = vWindow.Views.ViewId(i + 1);
-% 			warning(['No correspondences between frame ', num2str(id1), ...
-% 				' and frame ', num2str(id2)]);
-% 			return;
-% 		end
-
-		v = zeros(1, vWindow.WindowSize - 1);
-		for j = 1:len
-			% reset view counter
+		matches = correspondences{i, i + 1};
+		for k = 1:size(matches, 1)
+			v = zeros(1, vWindow.WindowSize);
 			viewCounter = i + 1;
+			feature1 = vWindow.Views.Features{i}(matches(k, 1), :);
 			while viewCounter <= vWindow.WindowSize
-				%looking for correspondences with view (i + 1)
-				index = correspondences{i, viewCounter};
-				[~, ~, ib] = intersect(...
-					correspondences{i, i + 1}(j, 1), index(:, 1));
-
-				if ~isempty(ib)
-					%TODO check if feature with index correspondences{i, i + 1}(j,
-					%1) in view i matches correspondences{i, viewCounter}(ib, 2) in
-					%view viewCounter
-					fIdx1 = correspondences{i, i + 1}(j, 1);
-					fIdx2 = correspondences{i, viewCounter}(ib, 2);
-					feature1 = vWindow.Views.Features{i}(fIdx1, :);
-					feature2 = vWindow.Views.Features{viewCounter}(fIdx2, :);
+				idx = findMatchingFeatureIndex(correspondences, i,...
+					viewCounter, matches(k, 1));
+				if idx > 0
+					% TrackConsistency check
+					feature2 = vWindow.Views.Features{viewCounter}(idx, :);
 					trackConsistency = ~isempty(...
 						matchFeatures(feature1, feature2, 'Unique', true));
-					if ~trackConsistency
-						vId1 = vWindow.Views.ViewId(i);
-						vId2 = vWindow.Views.ViewId(viewCounter);
-% 						warning(['feature ', num2str(fIdx1), ...
-% 							' in view ', num2str(vId1),...
-% 							' tracked to feature ', num2str(fIdx2), ...
-% 							' in view ', num2str(vId2),...
-% 							': match consistency failed, track not added']);
+					if trackConsistency
+						v(viewCounter) = idx;
+						viewCounter = viewCounter + 1;
+					else
+						%track consistency failed
 						break;
 					end
-					
-					v(viewCounter) = ib;
-					if viewCounter >= vWindow.WindowSize
-						%this feature has been tracked in every view inside window.
-						%Add it to goodMatches with the right indexes (the ones
-						%stored in vector v)
-						for k = (i + 1):vWindow.WindowSize
-							goodMatches{i, k}(end + 1, :) = ...
-								correspondences{i, k}(v(k), :);
-						end
-						% we exit from the inner loop for sure now
-					end
-					viewCounter = viewCounter + 1;
 				else
-					% this features is not found in every view of the
-					% window
+					% feature not found in view viewCounter
 					break;
 				end
 			end
+			
+			% The program arrives here if either the feature could not be
+			% tracked till the lasts view, some track consistency check failed
+			% or the feature has been tracked along every view. It depends on
+			% viewCounter value
+			if viewCounter > vWindow.WindowSize
+				for j = (i + 1):vWindow.WindowSize
+					goodMatches{i, j} = ...
+						[goodMatches{i, j}; [matches(k, 1), v(j)]];
+				end
+			else
+				% The track is not complete or it does not satisfy the track
+				% consistency check, discard it
+				continue;
+			end
+		end
+		
+		% If no tracks have been added, there is nothing else to do
+		if isempty(goodMatches{i, i + 1})
+			id1 = vWindow.Views.ViewId(i);
+			id2 = vWindow.Views.ViewId(i + 1);
+			warning(['No correspondences between frame ', num2str(id1), ...
+				' and frame ', num2str(id2)]);
+			return;
+		end
+		
+		% The set of matches between the next two views have to be a subset of
+		% the track computed in the previous iteration
+		if i + 1 < vWindow.WindowSize
+			[~, ~, ib] = intersect(...
+				goodMatches{i, i + 1}(:, 2), ...
+				correspondences{i + 1, i + 2}(:, 1));
+			correspondences{i + 1, i + 2} = ...
+				correspondences{i + 1, i + 2}(ib, :);
 		end
 	end
 	
