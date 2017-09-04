@@ -8,11 +8,11 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 	removeBackPointsBeforePoseEstimation = true;
 	
 	% Maximum number of trials before giving up with E and pose estimation
-	if narging < 8
+	if nargin < 8
 	 	maxIterations = 100;
 	end
 	
-	if narging < 7
+	if nargin < 7
 		maxNumTrials = 50000;
 	end
 	

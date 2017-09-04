@@ -1,21 +1,20 @@
 clear VARIABLES;
-addpath(fullfile('..', 'coordinate_transform'));
-addpath(fullfile('..', 'utils/'));
-addpath(fullfile('..', 'filters/'));
-addpath(fullfile('..', 'ground_truth'));
-addpath(fullfile('..', 'data_analysis'));
-addpath(fullfile('..', 'plot'));
-imageDir = fullfile('images', 'sfm_test', 'test8', '*.png');
-load(fullfile('images', 'sfm_test', 'test8', 'groundTruth.mat'));
-filename = '../test2_nobundle.xlsx';
+addpath(fullfile('./coordinate_transform'));
+addpath(fullfile('./utils/'));
+addpath(fullfile('./filters/'));
+addpath(fullfile('./ground_truth'));
+addpath(fullfile('./data_analysis'));
+addpath(fullfile('./plot'));
+imageDir = fullfile('./images/sfm_test/test8/*.png');
+load(fullfile('./images/sfm_test/test8/groundTruth.mat'));
 
-resultsBaseFolder = fullfile('..', '..', 'results', 'bdlAdj_absTolerance_vs_seqLen');
+resultsBaseFolder = fullfile('./../results/bdlAdj_absTolerance_vs_seqLen');
 paramTable = table(...
 	{'at 1e-02'; 'at 1e-03'; 'at 1e-04'; 'at 1e-05';}, ...
-	{[resultsBaseFolder, '/at_1e-02.xlsx'];
-	[resultsBaseFolder, '/at_1e-03.xlsx'];
-	[resultsBaseFolder, '/at_1e-04.xlsx']; 
-	[resultsBaseFolder, '/at_1e-05.xlsx']}, ...
+	{fullfile(resultsBaseFolder, '/at_1e-02.xlsx');
+	fullfile(resultsBaseFolder, '/at_1e-03.xlsx');
+	fullfile(resultsBaseFolder, '/at_1e-04.xlsx'); 
+	fullfile(resultsBaseFolder, '/at_1e-05.xlsx')}, ...
 	[1e-02; 1e-03; 1e-04; 1e-05], ...
 	'VariableNames', {'DataSeriesName', 'OutputFileName', 'AbsoluteTolerance'});
 
@@ -57,41 +56,45 @@ relOrientationError = cell(repetitions, 1);
 pointsForEEstimationCounter = cell(repetitions, 1);
 pointsForPoseEstimationCounter = cell(repetitions, 1);
 trackSize = cell(repetitions, 1);
-locError = zeros(repetitions, c);
-orientError = cell(repetitions, c);
-locXerror = zeros(repetitions, c);
-locYerror = zeros(repetitions, c);
-locZerror = zeros(repetitions, c);
-angularXerror = zeros(repetitions, c);
-angularYerror = zeros(repetitions, c);
-angularZerror = zeros(repetitions, c);
 
 sumLocError = zeros(size(paramTable, 1), size(seqLength, 2));
+sumLocErrorCI = zeros(size(sumLocError));
 sumOrientErrorX = zeros(size(paramTable, 1), size(seqLength, 2));
+sumOrientErrorXCI = zeros(size(sumOrientErrorX));
 sumOrientErrorY = zeros(size(paramTable, 1), size(seqLength, 2));
+sumOrientErrorYCI = zeros(size(sumOrientErrorY));
 sumOrientErrorZ = zeros(size(paramTable, 1), size(seqLength, 2));
-
-distanceGT = zeros(c, 1);
-orientationGT = zeros(c, 3);
+sumOrientErrorZCI = zeros(size(sumOrientErrorZ));
 
 groundTruthPoses = alignOrientation(groundTruthPoses);
 
-resultTable = table({zeros(1, c)}, {zeros(1, c)}, {zeros(1, c)}, {zeros(1, c)}, 'VariableNames', {'LocError', 'OrientErrorX', ...
+resultTable = table({zeros(1, size(seqLength, 1))}, {zeros(1, size(seqLength, 1))}, {zeros(1, size(seqLength, 1))}, {zeros(1, size(seqLength, 1))}, 'VariableNames', {'LocError', 'OrientErrorX', ...
 	'OrientErrorY', 'OrientErrorZ'});
 resultTable = repmat(resultTable, height(paramTable), 1);
-resultCItable = table({zeros(1, c)}, {zeros(1, c)}, {zeros(1, c)}, {zeros(1, c)}, ...
+resultCItable = table({zeros(1, size(seqLength, 1))}, {zeros(1, size(seqLength, 1))}, {zeros(1, size(seqLength, 1))}, {zeros(1, size(seqLength, 1))}, ...
 	'VariableNames', {'LocErrorMeanCI', 'OrientErrorXmeanCI', 'OrientErrorYmeanCI', 'OrientErrorZmeanCI'});
 resultCItable = repmat(resultCItable, height(paramTable), 1);
 
 for k = 1:height(paramTable)
 	% Setting same seed for each experiment
 	rng('default');
+	index = 1;
 	for c = seqLength
 	
+		locError = zeros(repetitions, c);
+		orientError = cell(repetitions, c);
+		locXerror = zeros(repetitions, c);
+		locYerror = zeros(repetitions, c);
+		locZerror = zeros(repetitions, c);
+		angularXerror = zeros(repetitions, c);
+		angularYerror = zeros(repetitions, c);
+		angularZerror = zeros(repetitions, c);
+
 		for i = 1:repetitions
 
 			display(['Experiment: ', num2str(k)]);
 			display(['Repetition: ', num2str(i)]);
+			display(['Sequence length: ', num2str(c)]);
 
 			[vSet, xyzPoints, reprojectionErrors, ...
 				~, ...
@@ -121,21 +124,20 @@ for k = 1:height(paramTable)
 				angularXerror(i, j) = orientError{i, j}(3);
 			end
 		end
-		sumLocationError = sum(mean(locError, 1));
-		sumOrientationErrorX = sum(mean(angularXerror, 1));
-		sumOrientationErrorY = sum(mean(angularYerror, 1));
-		sumOrientationErrorZ = sum(mean(angularZerror, 1));
+		sumLocError(k, index) = sum(mean(locError, 1));
+		sumOrientErrorX(k, index) = sum(mean(angularXerror, 1));
+		sumOrientErrorY(k, index) = sum(mean(angularYerror, 1));
+		sumOrientErrorZ(k, index) = sum(mean(angularZerror, 1));
+		index = index + 1;
 	end
-
-	orientationGT = 180/pi*orientationGT;
 
 	%% Write results
 	filename = paramTable.OutputFileName{k};
 	params = table(repetitions, computeRelativeScaleBeforeBundleAdjustment, ...
 		maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
 		zMin,...
-		prefilterLLKeyPoints, maxLatitudeAngle, paramTable.GlobalBundleAdjustment{k}, ...
-		paramTable.WindowedBundleAdjustment{k}, paramTable.WindowSize(k));
+		prefilterLLKeyPoints, maxLatitudeAngle, true, ...
+		false, 2);
 
 	writetable(params, filename, 'Range', 'A1');
 
@@ -203,64 +205,64 @@ for k = 1:height(paramTable)
 	base = base + tableNumber*tSize;
 	tSize = repetitions + 3;
 	tableNumber = 0;
-
-	%location error
-	columnNames = {'repetition', 'locError'};
-	errorLocationTable = table((1:repetitions)', locError, 'VariableNames', ...
-		columnNames);
-	writetable(errorLocationTable, filename, 'Range', ...
-		['A', num2str(base + tableNumber*tSize)]);
-
-	tableNumber = tableNumber + 1;
-
-	%angular error X
-	errorXtable = table((1:repetitions)', angularXerror, ...
-		'VariableNames', {'repetitions', 'orientX_deg'});
-	writetable(errorXtable, filename, 'Range', ...
-		['A' num2str(base + tableNumber*tSize)]);
-
-	tableNumber = tableNumber + 1;
-
-	%angular error Y
-	errorYtable = table((1:repetitions)', angularYerror, ...
-		'VariableNames', {'repetitions', 'orientY_deg'});
-	writetable(errorYtable, filename, 'Range', ...
-		['A' num2str(base + tableNumber*tSize)]);
-
-	tableNumber = tableNumber + 1;
-
-	%angular error Z
-	errorZtable = table((1:repetitions)', angularZerror, ...
-		'VariableNames', {'repetitions', 'orientZ_deg'});
-	writetable(errorZtable, filename, 'Range', ...
-		['A' num2str(base + tableNumber*tSize)]);
-
-	tableNumber = tableNumber + 1;
-
-	% Estimation data
-	writetable(...
-		table(...
-		(1:repetitions)', pointsForEEstimationCounter, ...
-		'VariableNames', {'repetitions', 'pointsForEEstimation'}), ...
-		filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
-
-	tableNumber = tableNumber + 1;
-
-	writetable(...
-		table(...
-		(1:repetitions)', pointsForPoseEstimationCounter, ...
-		'VariableNames', {'repetitions', 'pointsForPoseEstimation'}), ...
-		filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
-
-	tableNumber = tableNumber + 1;
-
-	writetable(...
-		table(...
-		(1:repetitions)', trackSize, ...
-		'VariableNames', {'repetitions', 'trackSize'}), ...
-		filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
-
-	tableNumber = tableNumber + 1;
+	
+% 	%location error
+% 	columnNames = {'repetition', 'locError'};
+% 	errorLocationTable = table((1:repetitions)', locError, 'VariableNames', ...
+% 		columnNames);
+% 	writetable(errorLocationTable, filename, 'Range', ...
+% 		['A', num2str(base + tableNumber*tSize)]);
+% 
+% 	tableNumber = tableNumber + 1;
+% 
+% 	%angular error X
+% 	errorXtable = table((1:repetitions)', angularXerror, ...
+% 		'VariableNames', {'repetitions', 'orientX_deg'});
+% 	writetable(errorXtable, filename, 'Range', ...
+% 		['A' num2str(base + tableNumber*tSize)]);
+% 
+% 	tableNumber = tableNumber + 1;
+% 
+% 	%angular error Y
+% 	errorYtable = table((1:repetitions)', angularYerror, ...
+% 		'VariableNames', {'repetitions', 'orientY_deg'});
+% 	writetable(errorYtable, filename, 'Range', ...
+% 		['A' num2str(base + tableNumber*tSize)]);
+% 
+% 	tableNumber = tableNumber + 1;
+% 
+% 	%angular error Z
+% 	errorZtable = table((1:repetitions)', angularZerror, ...
+% 		'VariableNames', {'repetitions', 'orientZ_deg'});
+% 	writetable(errorZtable, filename, 'Range', ...
+% 		['A' num2str(base + tableNumber*tSize)]);
+% 
+% 	tableNumber = tableNumber + 1;
+% 
+% 	% Estimation data
+% 	writetable(...
+% 		table(...
+% 		(1:repetitions)', pointsForEEstimationCounter, ...
+% 		'VariableNames', {'repetitions', 'pointsForEEstimation'}), ...
+% 		filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
+% 
+% 	tableNumber = tableNumber + 1;
+% 
+% 	writetable(...
+% 		table(...
+% 		(1:repetitions)', pointsForPoseEstimationCounter, ...
+% 		'VariableNames', {'repetitions', 'pointsForPoseEstimation'}), ...
+% 		filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
+% 
+% 	tableNumber = tableNumber + 1;
+% 
+% 	writetable(...
+% 		table(...
+% 		(1:repetitions)', trackSize, ...
+% 		'VariableNames', {'repetitions', 'trackSize'}), ...
+% 		filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
+% 
+% 	tableNumber = tableNumber + 1;
 	
 	%% compute mean
 	resultTable.LocError{k} = mean(locError, 1);
@@ -268,21 +270,54 @@ for k = 1:height(paramTable)
 	resultTable.OrientErrorY{k} = mean(angularYerror, 1);
 	resultTable.OrientErrorZ{k} = mean(angularZerror, 1);
 	
-	resultCItable.LocErrorMeanCI{k} = computeMeanConfidenceInterval(locError);
+	resultCItable.LocErrorMeanCI{k} = ...
+		computeMeanConfidenceInterval(locError);
 	resultCItable.OrientErrorXmeanCI{k} = ...
 		computeMeanConfidenceInterval(angularXerror);
 	resultCItable.OrientErrorYmeanCI{k} = ...
 		computeMeanConfidenceInterval(angularYerror);
 	resultCItable.OrientErrorZmeanCI{k} = ...
 		computeMeanConfidenceInterval(angularZerror);
+	
 end
 
 %% Display result
-tmpLocErrorResult = cat(1, resultTable.LocError{:});
-tmpLocErrorCI = cat(1, resultCItable.LocErrorMeanCI{:});
-plotWithErrorBar(tmpLocErrorResult', tmpLocErrorCI', paramTable.DataSeriesName);
-saveas(gcf,fullfile('..', 'results', 'absoluteToleranceTest_10views', 'Barchart.fig'));
-saveas(gcf,fullfile('..', 'results', 'absoluteToleranceTest_10views', 'Barchart.pdf'));
+sumLocErrorCI = computeMeanConfidenceInterval(sumLocError);
+figure;
+% plotWithErrorBar(sumLocError', sumLocErrorCI', paramTable.DataSeriesName);
+bar(sumLocError');
+legend(paramTable.DataSeriesName);
+title('Mean location error');
+saveas(gcf, fullfile(resultsBaseFolder, 'locErrorPlot.fig'));
+saveas(gcf, fullfile(resultsBaseFolder, 'locErrorPlot.pdf'));
+
+sumOrientErrorXCI = computeMeanConfidenceInterval(sumOrientErrorX);
+figure;
+% plotWithErrorBar(sumOrientErrorX', sumOrientErrorXCI, paramTable.DataSeriesName);
+bar(sumOrientErrorX');
+legend(paramTable.DataSeriesName);
+title('Mean X orientation error');
+saveas(gcf, fullfile(resultsBaseFolder, 'orientErrorXplot.fig'));
+saveas(gcf, fullfile(resultsBaseFolder, 'orientErrorXplot.pdf'));
+
+sumOrientErrorYCI = computeMeanConfidenceInterval(sumOrientErrorY);
+figure;
+% plotWithErrorBar(sumOrientErrorY', sumOrientErrorYCI, paramTable.DataSeriesName);
+bar(sumOrientErrorY');
+legend(paramTable.DataSeriesName);
+title('Mean Y orientation error');
+saveas(gcf, fullfile(resultsBaseFolder, 'orientErrorYplot.fig'));
+saveas(gcf, fullfile(resultsBaseFolder, 'orientErrorYplot.pdf'));
+
+sumOrientErrorZCI = computeMeanConfidenceInterval(sumOrientErrorZ);
+figure;
+% plotWithErrorBar(sumOrientErrorZ', sumOrientErrorCI, paramTable.DataSeriesName);
+bar(sumOrientErrorZ');
+legend(paramTable.DataSeriesName);
+title('Mean Z orientation error');
+saveas(gcf, fullfile(resultsBaseFolder, 'orientErrorZplot.fig'));
+saveas(gcf, fullfile(resultsBaseFolder, 'orientErrorZplot.pdf'));
+
 
 if enableFigures
 	% Display camera poses.
