@@ -1,8 +1,9 @@
 %% Init
 clear VARIABLES
 
-imageDir = fullfile('images', 'sfm_test', 'test4', '*.png');
-load(fullfile('images', 'sfm_test', 'test4', 'groundTruth.mat'));
+dataFolder = fullfile('images/sfm_test/test8_10bigger');
+imageDir = fullfile(dataFolder, '*.png');
+load(fullfile(dataFolder, 'groundTruth.mat'));
 % this is the name of the file used to store the results
 imds = imageDatastore(imageDir);
 
@@ -12,7 +13,7 @@ addpath(fullfile('ground_truth'));
 addpath(fullfile('data_analysis'));
 addpath(fullfile('plot'));
 usePointProjection = false;
-zMin = 0.037;
+zMin = 0.07;
 dim = 540;
 repetitions = 30;
 
@@ -281,3 +282,6 @@ plotWithErrorBar(meanOrientationErrorZ', meanOrientationCIZ', expParam.Experimen
 saveas(gcf, [resultBaseFolder, '/meanOrientErrorZ.fig']);
 saveas(gcf, [resultBaseFolder, '/meanOrientErrorZ.pdf']);
 title('Mean orientation error aroung Z');
+
+%% save workspace
+save(fullfile(resultBaseFolder, 'workspace.mat'));
