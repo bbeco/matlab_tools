@@ -5,13 +5,14 @@ addpath('filters/');
 addpath('ground_truth');
 addpath(fullfile('data_analysis'));
 addpath(fullfile('plot'));
-% imageDir = fullfile('images', 'sfm_test', 'test8', {'ll00.png', 'll01.png', 'll02.png', 'll03.png', 'll04.png', 'll05.png', 'll06.png', 'll07.png'});
-imageDir = fullfile('images', 'sfm_test', 'test8', '*.png');
-load(fullfile('images', 'sfm_test', 'test8', 'groundTruth.mat'));
+dataFolder = fullfile('..', 'images', 'sfm_test', 'test8');
+imageDir = fullfile(dataFolder, '*.png');
+load(fullfile(dataFolder, 'groundTruth.mat'));
 filename = '../test2_nobundle.xlsx';
 
+resultBaseFolder = fullfile('../../results/testWindow');
 paramTable = table(...
-	{'at 1e-01'; 'at 1e-02'; 'at 1e-03'; 'at 1e-04'; 'at 1e-05';'at 1e-06'}, ...
+	{'Window'; 'at 1e-02'; 'at 1e-03'; 'at 1e-04'; 'at 1e-05';'at 1e-06'}, ...
 	{fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-01.xlsx');
 	fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-02.xlsx');
 	fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-03.xlsx'); 
@@ -19,9 +20,9 @@ paramTable = table(...
 	fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-05.xlsx');
 	fullfile('..', 'results', 'absoluteToleranceTest_10views', 'at_1e-06.xlsx')}, ...
 	{true; true; true; true; true; true}, {false; false; false; false; false; false}, ...
-	[2; 2; 2; 2; 2; 2], [1e-01; 1e-02; 1e-03; 1e-04; 1e-05; 1e-06], ...
+	[2; 2; 2; 2; 2; 2], ...
 	'VariableNames', {'DataSeriesName', 'OutputFileName', 'GlobalBundleAdjustment', ...
-	'WindowedBundleAdjustment', 'WindowSize', 'AbsoluteTolerance'});
+	'WindowedBundleAdjustment', 'WindowSize'});
 
 for i = 1:height(paramTable)
 	if exist(paramTable.OutputFileName{i}, 'file')

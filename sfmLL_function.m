@@ -173,8 +173,8 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 			'Location', location);
 		
 		if i >= vWindow.WindowSize
-			vSet = addConnection(vSet, i - 1, i, 'Matches', indexPairs);
-			%vSet = computeTrackAndCreateConnections(vSet, vWindow);
+% 			vSet = addConnection(vSet, i - 1, i, 'Matches', indexPairs);
+			vSet = computeTrackAndCreateConnections(vSet, vWindow);
 
 			if performWindowedBundleAdjustment
 				% Find point tracks across all views.
@@ -192,7 +192,9 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 				% Refine the 3-D world points and camera poses.
 				[xyzPoints, camPoses, reprojectionErrors] = ...
 					bundleAdjustment(xyzPoints, tracks, camPoses, ...
-					cameraParams, 'FixedViewId', 1, 'PointsUndistorted', true);
+					cameraParams, 'FixedViewId', 1, ...
+					'PointsUndistorted', true, ...
+					'AbsoluteTolerance', absoluteTolerance);
 
 				% Store the refined camera poses.
 				vSet = updateView(vSet, camPoses);
