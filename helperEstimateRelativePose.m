@@ -38,7 +38,8 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 % 		num2str(size(matchedPts1, 1))]);
 	pointsForEEstimationCounter = size(indexPairs, 1);
 
-	for i = 1:maxIterations
+	i = 1;
+	while i <= maxIterations
 		% inliersIndex is a logical vector with the points that satisfy the
 		% epipolar constraint.
 		[E, inliersIndex, status] = estimateEssentialMatrix(matchedPts1,...
@@ -62,7 +63,10 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 		% selecting inliers matches only!
 		indexPairsNoFront = indexPairs(inliersIndex, :);
 		
-		if sum(inliersIndex) == 0 && i < maxIterations
+		if sum(inliersIndex) == 0
+			if i < maxIterations
+				i = i + 1;
+			end
 			continue;
 		end
 		
@@ -85,6 +89,8 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 			indexPairs = indexPairsNoFront;
 			return;
 		end
+		
+		i = i + 1;
 	end
 	indexPairs = indexPairsNoFront;
 	warning('estimating camera pose: Maximum iterations limit reached');

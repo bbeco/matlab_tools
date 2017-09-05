@@ -2,9 +2,9 @@ import bpy
 
 from camera_pose import CameraPose
 
-baseOutputFolder = '/home/andrea/matlab_tools/images/sfm_test/test7/'
+baseOutputFolder = '/home/andrea/thesys/matlab_tools/images/sfm_test/test8_10bigger/'
 firstFrameNumber = 1
-lastFrameNumber = 50
+lastFrameNumber = 19
 cameraName = 'Camera.001'
 outputFile = '/tmp/poses.txt'
 

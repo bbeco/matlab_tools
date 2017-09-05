@@ -17,9 +17,11 @@ function h = plotWithErrorBar(model_series, model_error, dataSeriesName)
  	xlabel ('ViewId');
  	ylabel ('Mean Error');
 	% Creating a legend and placing it outside the bar plot
- 	lg = legend(dataSeriesName, 'AutoUpdate','off');
-	lg.Location = 'BestOutside';
-	lg.Orientation = 'Horizontal';
+	if nargin >= 3
+		lg = legend(dataSeriesName, 'AutoUpdate','off');
+		lg.Location = 'BestOutside';
+		lg.Orientation = 'Horizontal';
+	end
 	hold on;
 	% Finding the number of groups and the number of bars in each group
 	ngroups = size(model_series, 1);
