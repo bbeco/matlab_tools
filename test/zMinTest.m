@@ -5,7 +5,7 @@ addpath(fullfile('filters'));
 addpath(fullfile('ground_truth'));
 addpath(fullfile('data_analysis'));
 addpath(fullfile('plot'));
-dataFolder = fullfile('images', 'sfm_test', 'test8');
+dataFolder = fullfile('images', 'sfm_test', 'test8_10bigger');
 imageDir = fullfile(dataFolder, '*.png');
 load(fullfile(dataFolder, 'groundTruth.mat'));
 

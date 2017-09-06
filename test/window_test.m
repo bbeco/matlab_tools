@@ -1,8 +1,8 @@
 clear VARIABLES;
 addpath('coordinate_transform');
-addpath('utils/');
-addpath('filters/');
-addpath('ground_truth');
+addpath(fullfile('utils'));
+addpath(fullfile('filters'));
+addpath(fullfile('ground_truth'));
 addpath(fullfile('data_analysis'));
 addpath(fullfile('plot'));
 dataFolder = fullfile('images', 'sfm_test', 'test8');
@@ -23,6 +23,8 @@ paramTable = table(...
 	'VariableNames', {'DataSeriesName', 'OutputFileName', 'GlobalBundleAdjustment', ...
 	'WindowedBundleAdjustment', 'WindowSize'});
 
+paramTable = paramTable([1, 2, 3], :);
+
 for i = 1:height(paramTable)
 	if exist(paramTable.OutputFileName{i}, 'file')
 		delete(paramTable.OutputFileName{i});
@@ -31,8 +33,8 @@ end
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = false;
-repetitions = 2;
+enableFigures = true;
+repetitions = 1;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 0.8;
@@ -44,7 +46,7 @@ angularThreshold = 2; %degrees
 % minimun threshold for the third components of key points directions.
 % This is used when the keypoints are not projected on a new image plane for 
 % essential matrix estimation
-zMin = 0.037;
+zMin = 0.07;
 
 prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
@@ -56,7 +58,7 @@ bundleAdjustmentAbsoluteTolerance = 1e-05;
 imds = imageDatastore(imageDir);
 % c = numel(imds.Files);
 %The following is the actual number of images processed
-c = 6;
+c = 20;
 relLocationError = cell(repetitions, 1);
 relOrientationError = cell(repetitions, 1);
 pointsForEEstimationCounter = cell(repetitions, 1);
@@ -70,6 +72,11 @@ locZerror = zeros(repetitions, c);
 angularXerror = zeros(repetitions, c);
 angularYerror = zeros(repetitions, c);
 angularZerror = zeros(repetitions, c);
+
+sumAbsLocError = zeros(size(paramTable, 1), 1);
+sumAbsLocErrorCI = zeros(size(sumAbsLocError));
+sumAbsOrientError = zeros(size(paramTable, 1), 3);
+sumAbsOrientErrorCI = zeros(size(sumAbsOrientError));
 
 groundTruthPoses = alignOrientation(groundTruthPoses);
 
@@ -108,6 +115,38 @@ for k = 1:height(paramTable)
 		[tmpLocError, tmpOrientError] = ...
 			computePoseError(estLocation, estOrientation, groundTruthPoses, ...
 			false, 1:c);
+		
+		if enableFigures
+			% Display camera poses.
+			camPoses = poses(vSet);
+			figure;
+			plotCamera(camPoses, 'Size', 0.2);
+			hold on
+			plotCamera(groundTruthPoses, 'Size', 0.2, 'Color', [0 1 0]);
+
+			xlabel('X');
+			ylabel('Y');
+			zlabel('Z');
+
+			% Exclude noisy 3-D points.
+			goodIdx = (reprojectionErrors < 5);
+			xyzPoints = xyzPoints(goodIdx, :);
+
+			% Display the 3-D points.
+			pcshow(xyzPoints, 'VerticalAxis', 'y', 'VerticalAxisDir', 'down', ...
+				'MarkerSize', 45);
+			grid on
+			hold off
+
+			% Specify the viewing volume.
+			loc1 = camPoses.Location{1};
+			xlim([loc1(1)-10, loc1(1)+10]);
+			ylim([loc1(2)-6, loc1(2)+6]);
+			zlim([loc1(3)-4, loc1(3)+11]);
+			camorbit(0, -30);
+
+			title(['Refined Camera Poses ', paramTable.DataSeriesName{k}]);
+		end
 
 		locError(i, :) = tmpLocError';
 		for j = 1:size(camPoses, 1)
@@ -116,7 +155,22 @@ for k = 1:height(paramTable)
 			angularYerror(i, j) = orientError{i, j}(2);
 			angularXerror(i, j) = orientError{i, j}(3);
 		end
+		
 	end
+	
+	% saving sum of absolute errors
+	sumAbsLocError(k) = mean(sum(locError, 2), 1);
+	sumAbsLocErrorCI(k) = computeMeanConfidenceInterval(sum(locError, 2));
+	sumAbsOrientError(k, 1) = mean(sum(angularXerror, 2), 1);
+	sumAbsOrientErrorCI(k, 1) = ...
+		computeMeanConfidenceInterval(sum(angularXerror, 2));
+	sumAbsOrientError(k, 2) = mean(sum(angularYerror, 2), 1);
+	sumAbsOrientErrorCI(k, 2) = ...
+		computeMeanConfidenceInterval(sum(angularYerror, 2));
+	sumAbsOrientError(k, 3) = mean(sum(angularZerror, 2), 1);
+	sumAbsOrientErrorCI(k, 3) = ...
+		computeMeanConfidenceInterval(sum(angularZerror, 2));
+	
 
 	%% Write results
 	filename = paramTable.OutputFileName{k};
@@ -299,34 +353,42 @@ title('Mean Z orientation error vs ViewId');
 saveas(gcf,fullfile(resultBaseFolder, 'orientErrorZ.fig'));
 saveas(gcf,fullfile(resultBaseFolder, 'orientErrorZ.pdf'));
 
-if enableFigures
-	% Display camera poses.
-	camPoses = poses(vSet);
-	figure;
-	plotCamera(camPoses, 'Size', 0.2);
-	hold on
-	plotCamera(groundTruthPoses, 'Size', 0.2, 'Color', [0 1 0]);
+%% sum absolute errors
+figure;
+errorbar(sumAbsLocError, sumAbsLocErrorCI);
+title('sum of absolute location errrors');
+axis([0, size(paramTable, 1) + 1, 0, 1]);
+axis 'auto y';
+xlabel('Experiment number');
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsLocError.fig'));
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsLocError.pdf'));
 
-	xlabel('X');
-	ylabel('Y');
-	zlabel('Z');
+figure;
+errorbar(sumAbsOrientError(:, 1), sumAbsOrientErrorCI(:, 1));
+title('sum of absolute X orientation errors');
+axis([0, size(paramTable, 1) + 1, 0, 1]);
+axis 'auto y';
+xlabel('Experiment number');
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientXError.fig'));
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientXError.pdf'));
 
-	% Exclude noisy 3-D points.
-	goodIdx = (reprojectionErrors < 5);
-	xyzPoints = xyzPoints(goodIdx, :);
+figure;
+errorbar(sumAbsOrientError(:, 2), sumAbsOrientErrorCI(:, 2));
+title('sum of absolute Y orientation errors');
+axis([0, size(paramTable, 1) + 1, 0, 1]);
+axis 'auto y';
+xlabel('Experiment number');
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientYError.fig'));
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientYError.pdf'));
 
-	% Display the 3-D points.
-	pcshow(xyzPoints, 'VerticalAxis', 'y', 'VerticalAxisDir', 'down', ...
-		'MarkerSize', 45);
-	grid on
-	hold off
+figure;
+errorbar(sumAbsOrientError(:, 3), sumAbsOrientErrorCI(:, 3));
+title('sum of absolute Z orientation errors');
+axis([0, size(paramTable, 1) + 1, 0, 1]);
+axis 'auto y';
+xlabel('Experiment number');
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientZError.fig'));
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientZError.pdf'));
 
-	% Specify the viewing volume.
-	loc1 = camPoses.Location{1};
-	xlim([loc1(1)-10, loc1(1)+10]);
-	ylim([loc1(2)-6, loc1(2)+6]);
-	zlim([loc1(3)-4, loc1(3)+11]);
-	camorbit(0, -30);
-
-	title('Refined Camera Poses');
-end
+%% Saving environment
+save(fullfile(resultBaseFolder, 'workspace.mat'));
