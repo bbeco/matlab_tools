@@ -5,7 +5,7 @@ addpath(fullfile('filters'));
 addpath(fullfile('ground_truth'));
 addpath(fullfile('data_analysis'));
 addpath(fullfile('plot'));
-dataFolder = fullfile('images', 'sfm_test', 'test8');
+dataFolder = fullfile('images', 'sfm_test', 'test8_10bigger');
 imageDir = fullfile(dataFolder, '*.png');
 load(fullfile(dataFolder, 'groundTruth.mat'));
 
@@ -23,7 +23,7 @@ paramTable = table(...
 	'VariableNames', {'DataSeriesName', 'OutputFileName', 'GlobalBundleAdjustment', ...
 	'WindowedBundleAdjustment', 'WindowSize'});
 
-paramTable = paramTable([1, 2, 3], :);
+paramTable = paramTable(5, :);
 
 for i = 1:height(paramTable)
 	if exist(paramTable.OutputFileName{i}, 'file')
@@ -33,7 +33,7 @@ end
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = true;
+enableFigures = false;
 repetitions = 1;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
