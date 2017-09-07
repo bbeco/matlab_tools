@@ -23,7 +23,7 @@ paramTable = table(...
 	'VariableNames', {'DataSeriesName', 'OutputFileName', 'GlobalBundleAdjustment', ...
 	'WindowedBundleAdjustment', 'WindowSize'});
 
-paramTable = paramTable(5, :);
+% paramTable = paramTable([1, 2, 5], :);
 
 for i = 1:height(paramTable)
 	if exist(paramTable.OutputFileName{i}, 'file')
@@ -34,7 +34,7 @@ end
 % ********** PARAMETERS ************
 % whether to plot camera position or not
 enableFigures = false;
-repetitions = 1;
+repetitions = 30;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 0.8;
@@ -51,27 +51,31 @@ zMin = 0.07;
 prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
 
-bundleAdjustmentAbsoluteTolerance = 1e-05;
+% Bundle Adjustment parameters
+bundleAdjustmentAbsoluteTolerance = 0;
+bundleAdjustmentRelativeTolerance = 0;
+bundleAdjustmentMaxIterations = 300;
 
 % **********************************
 
 imds = imageDatastore(imageDir);
 % c = numel(imds.Files);
 %The following is the actual number of images processed
-c = 20;
+seqLength = 20;
 relLocationError = cell(repetitions, 1);
 relOrientationError = cell(repetitions, 1);
 pointsForEEstimationCounter = cell(repetitions, 1);
 pointsForPoseEstimationCounter = cell(repetitions, 1);
+reprojectionErrors = cell(repetitions, 1);
 trackSize = cell(repetitions, 1);
-locError = zeros(repetitions, c);
-orientError = cell(repetitions, c);
-locXerror = zeros(repetitions, c);
-locYerror = zeros(repetitions, c);
-locZerror = zeros(repetitions, c);
-angularXerror = zeros(repetitions, c);
-angularYerror = zeros(repetitions, c);
-angularZerror = zeros(repetitions, c);
+locError = zeros(repetitions, seqLength);
+orientError = cell(repetitions, seqLength);
+locXerror = zeros(repetitions, seqLength);
+locYerror = zeros(repetitions, seqLength);
+locZerror = zeros(repetitions, seqLength);
+angularXerror = zeros(repetitions, seqLength);
+angularYerror = zeros(repetitions, seqLength);
+angularZerror = zeros(repetitions, seqLength);
 
 sumAbsLocError = zeros(size(paramTable, 1), 1);
 sumAbsLocErrorCI = zeros(size(sumAbsLocError));
@@ -80,10 +84,10 @@ sumAbsOrientErrorCI = zeros(size(sumAbsOrientError));
 
 groundTruthPoses = alignOrientation(groundTruthPoses);
 
-resultTable = table({zeros(1, c)}, {zeros(1, c)}, {zeros(1, c)}, {zeros(1, c)}, 'VariableNames', {'LocError', 'OrientErrorX', ...
+resultTable = table({zeros(1, seqLength)}, {zeros(1, seqLength)}, {zeros(1, seqLength)}, {zeros(1, seqLength)}, 'VariableNames', {'LocError', 'OrientErrorX', ...
 	'OrientErrorY', 'OrientErrorZ'});
 resultTable = repmat(resultTable, height(paramTable), 1);
-resultCItable = table({zeros(1, c)}, {zeros(1, c)}, {zeros(1, c)}, {zeros(1, c)}, ...
+resultCItable = table({zeros(1, seqLength)}, {zeros(1, seqLength)}, {zeros(1, seqLength)}, {zeros(1, seqLength)}, ...
 	'VariableNames', {'LocErrorMeanCI', 'OrientErrorXmeanCI', 'OrientErrorYmeanCI', 'OrientErrorZmeanCI'});
 resultCItable = repmat(resultCItable, height(paramTable), 1);
 
@@ -96,7 +100,7 @@ for k = 1:height(paramTable)
 		display(['Experiment: ', num2str(k)]);
 		display(['Repetition: ', num2str(i)]);
 
-		[vSet, xyzPoints, reprojectionErrors, ...
+		[vSet, xyzPoints, reprojectionErrors{i}, ...
 			pointsForEEstimationCounter{i}, ...
 			pointsForPoseEstimationCounter{i}, trackSize{i}] = ...
 			sfmLL_function(imageDir, ...
@@ -105,7 +109,9 @@ for k = 1:height(paramTable)
 			zMin, ...
 			prefilterLLKeyPoints, maxLatitudeAngle, ...
 			paramTable.GlobalBundleAdjustment{k}, paramTable.WindowedBundleAdjustment{k}, ...
-			paramTable.WindowSize(k), groundTruthPoses, c, bundleAdjustmentAbsoluteTolerance);
+			paramTable.WindowSize(k), groundTruthPoses, seqLength, ...
+			bundleAdjustmentAbsoluteTolerance, ...
+			bundleAdjustmentRelativeTolerance, bundleAdjustmentMaxIterations);
 
 		[vSet, groundTruthPoses] = normalizeViewSet(vSet, groundTruthPoses);
 		camPoses = poses(vSet);
@@ -114,7 +120,7 @@ for k = 1:height(paramTable)
 		estOrientation = camPoses.Orientation;
 		[tmpLocError, tmpOrientError] = ...
 			computePoseError(estLocation, estOrientation, groundTruthPoses, ...
-			false, 1:c);
+			false, 1:seqLength);
 		
 		if enableFigures
 			% Display camera poses.
@@ -129,8 +135,8 @@ for k = 1:height(paramTable)
 			zlabel('Z');
 
 			% Exclude noisy 3-D points.
-			goodIdx = (reprojectionErrors < 5);
-			xyzPoints = xyzPoints(goodIdx, :);
+% 			goodIdx = (reprojectionErrors < 5);
+% 			xyzPoints = xyzPoints(goodIdx, :);
 
 			% Display the 3-D points.
 			pcshow(xyzPoints, 'VerticalAxis', 'y', 'VerticalAxisDir', 'down', ...
@@ -174,11 +180,20 @@ for k = 1:height(paramTable)
 
 	%% Write results
 	filename = paramTable.OutputFileName{k};
-	params = table(repetitions, computeRelativeScaleBeforeBundleAdjustment, ...
+	params = table({dataFolder}, seqLength, repetitions, ...
+		computeRelativeScaleBeforeBundleAdjustment, ...
 		maxAcceptedReprojectionError, filterMatches, angularThreshold, ...
-		zMin,...
-		prefilterLLKeyPoints, maxLatitudeAngle, paramTable.GlobalBundleAdjustment{k}, ...
-		paramTable.WindowedBundleAdjustment{k}, paramTable.WindowSize(k));
+		zMin, prefilterLLKeyPoints, maxLatitudeAngle, ...
+		paramTable.GlobalBundleAdjustment{k}, ...
+		paramTable.WindowedBundleAdjustment{k}, paramTable.WindowSize(k), ...
+		bundleAdjustmentAbsoluteTolerance, bundleAdjustmentRelativeTolerance,...
+		bundleAdjustmentMaxIterations, ...
+		'VariableNames', {'dataFolder', 'seqLength', 'repetition', ...
+		'computeRelativeScaleBeforeBdlAdj', 'maxAcceptedReprojectionError', ...
+		'filterMatches', 'angularThreshold', 'zMin', 'prefilterLLKeyPoints', ...
+		'maxLatitudeAngle', 'globalBdlAdj', 'WindowedBdlAdj', 'WindowSize', ...
+		'BdlAdjAbsoluteTolerance', 'BdlAdjRelativeTolerance', ...
+		'BdlAdjMaxIterations'});
 
 	writetable(params, filename, 'Range', 'A1');
 
@@ -301,6 +316,14 @@ for k = 1:height(paramTable)
 		table(...
 		(1:repetitions)', trackSize, ...
 		'VariableNames', {'repetitions', 'trackSize'}), ...
+		filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
+
+	tableNumber = tableNumber + 1;
+	
+	writetable(...
+		table(...
+		(1:repetitions)', reprojectionErrors, ...
+		'VariableNames', {'repetition', 'medianOfReprojectionErrors'}), ...
 		filename, 'Range', ['A' num2str(base + tableNumber*tSize)]);
 
 	tableNumber = tableNumber + 1;
