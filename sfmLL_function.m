@@ -21,8 +21,8 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	% montage(imds.Files, 'Size', [4, 2]);
 
 	% Convert the images to grayscale.
-	images = cell(1, numel(imds.Files));
-	for i = 1:numel(imds.Files)
+	images = cell(1, imgNumber);
+	for i = 1:imgNumber
 		I = readimage(imds, i);
 		images{i} = rgb2gray(I);
 	end
@@ -130,6 +130,12 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 			validIndexes = filterLLMatches(prevPoints, currPoints, ...
 				indexPairs, angularThreshold, width, height);
 			indexPairs = indexPairs(validIndexes, :);
+		end
+		
+		% select frame in a sequence
+		if ~selectFrame(prevPoints, currPoints, 20, width, height)
+			% skip this frame
+			continue;
 		end
 
 		% Estimate the camera pose of current view relative to the previous view.
