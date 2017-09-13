@@ -1,5 +1,6 @@
 import bpy
 import mathutils
+import math
 import copy
 
 def retrieveCameraList():
@@ -33,7 +34,7 @@ class CameraPose:
 		return s
 
 	def _locationToStr(loc):
-		s = '[ ' + str(loc[0]) + ' ' + str(-loc[2]) + ' ' + str(loc[1]) + ' ]'
+		s = '[ ' + str(loc[0]) + ' ' + str(loc[1]) + ' ' + str(loc[2]) + ' ]'
 		return s
 
 	def __init__(self, cameraObj):
@@ -52,9 +53,12 @@ class CameraPose:
 	def getOrientation(self):
 		rot = mathutils.Matrix().to_3x3()
 		rot.identity()
-		mat1 = mathutils.Matrix.Rotation(self.rotation[0], 4, 'X').to_3x3()
+		# Sum pi to the X rotation because Matlab orientation reference points 
+		# towards the positive Z direction while Blender has the orientation 
+		# reference that points toward the negative Z direction.
+		mat1 = mathutils.Matrix.Rotation(self.rotation[0] + math.pi, 4, 'X').to_3x3()
 		mat2 = mathutils.Matrix.Rotation(self.rotation[1], 4, 'Y').to_3x3()
-		mat3 = mathutils.Matrix.Rotation(-self.rotation[2], 4, 'Z').to_3x3()
+		mat3 = mathutils.Matrix.Rotation(self.rotation[2], 4, 'Z').to_3x3()
 		rot = mat3 * mat2 * mat1
 		# rot is a rotation matrix in the premultiply form. Matlab ViewSet uses 
 		# post multiplication form for the orientation matrixes, so rot has to 
