@@ -1,4 +1,5 @@
-function relativeScale = computeRelativeScale(vSet, viewId, cameraParams, errorThreshold)
+function relativeScale = computeRelativeScale(vSet, viewId, cameraParams, ...
+		errorThreshold)
 % Compute the relative scale as the median of all the scale computed between two
 % point pairs.
 % This function uses the view informations from the last three views.

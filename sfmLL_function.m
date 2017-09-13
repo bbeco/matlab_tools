@@ -1,6 +1,6 @@
 function [vSet, xyzPoints, reprojectionErrors, ...
 		pointsForEEstimationCounter, ...
-		pointsForPoseEstimationCounter, tracksSize] = ...
+		pointsForPoseEstimationCounter, tracksSize, frameUsed] = ...
 		sfmLL_function(imageDir, ...
 		computeRelativeScaleBeforeBundleAdjustment, maxAcceptedReprojectionError, ...
 		filterMatches, angularThreshold, ...
@@ -8,7 +8,8 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, ...
 		performGlobalBundleAdjustment, performWindowedBundleAdjustment, ...
 		viewsWindowSize, groundTruthPoses, imgNumber, ...
-		baAbsoluteTolerance, baRelativeTolerance, baMaxIterations)
+		baAbsoluteTolerance, baRelativeTolerance, baMaxIterations, ...
+		seqFilterAngularThreshold, seqFilterQuantile)
 	
 	addpath(fullfile('ground_truth'));
 	imds = imageDatastore(imageDir);
@@ -17,8 +18,8 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	warning('off', 'images:initSize:adjustingMag');
 
 	% Display the images.
-	% figure
-	% montage(imds.Files, 'Size', [4, 2]);
+% 	figure
+% 	montage(imds.Files, 'Size', [4, 2]);
 
 	% Convert the images to grayscale.
 	images = cell(1, imgNumber);
@@ -35,10 +36,6 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	
 	vWindow = ViewWindow(viewsWindowSize);
 	
-	%compute relative motion between each pairs of views to evaluate the
-	%error for each relative pose estimation
-	groundTruthPoses = alignOrientation(groundTruthPoses);
-	
 	% number of points used for E estimation and for pose estimation
 	pointsForEEstimationCounter = zeros(numel(images), 1);
 	pointsForPoseEstimationCounter = zeros(numel(images), 1);
@@ -54,6 +51,15 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	% allocate as many values as the number of images to be processed though,
 	% because it easier to deal with its index.
 	reprojectionErrors = zeros(1, imgNumber + 1);
+	
+	% The following saves which image has been used for pose estimation and
+	% which not.
+	frameUsed = ones(1, imgNumber, 'logical');
+	
+	% The following support view set is used to store every possible connection
+	% and track in order to estimate the relative scale for each translation
+	% vector.
+	supportViewSet = viewSet;
 	
 	%% Processing first image
 	% Load first image
@@ -88,11 +94,17 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	% Add the first view. Place the camera associated with the first view
 	% and the origin, oriented along the Z-axis.
 	viewId = 1;
+	prevId = 1;
 	
 	vSet = addView(vSet, viewId, 'Points', ...
 		prevPointsConversion,...
 		'Orientation', eye(3, 'like', prevPoints.Location), 'Location', ...
 		zeros(1, 3, 'like', prevPoints.Location));
+	
+	supportViewSet = addView(supportViewSet, viewId, 'Points', ...
+		prevPointsConversion, ...
+		'Orientation', eye(3, 'like', prevPoints.Location), ...
+		'Location', zeros(1, 3, 'like', prevPoints.Location));
 	
 	addPoints(vWindow, viewId, prevPoints, ...
 		prevFeatures, ...
@@ -103,6 +115,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		disp(['Processing image ', num2str(i)]);
 		% Undistort the current image.
 		I = images{i};
+		currId = i;
 
 		% Detect, extract and match features.
 		currPoints = detectSURFFeatures(I);
@@ -124,7 +137,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 
 		currFeatures = extractFeatures(I, currPoints);
 		indexPairs = matchFeatures(prevFeatures, currFeatures, ...
-			'MaxRatio', .7, 'Unique',  true);
+			'MaxRatio', .6, 'Unique',  true);
 
 		if filterMatches
 			validIndexes = filterLLMatches(prevPoints, currPoints, ...
@@ -132,11 +145,23 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 			indexPairs = indexPairs(validIndexes, :);
 		end
 		
+		% Display correspondences
+% 		figure;
+% 		showMatchedFeatures(images{i-1}, images{i}, ...
+% 			prevPoints(indexPairs(:, 1), :), ...
+% 			currPoints(indexPairs(:, 2), :), 'montage');
+		
 		% select frame in a sequence
-		if ~selectFrame(prevPoints, currPoints, 20, width, height)
+		if ~selectFrame(prevPoints(indexPairs(:, 1), :), ...
+				currPoints(indexPairs(:, 2), :), seqFilterAngularThreshold, ...
+				width, height, seqFilterQuantile)
 			% skip this frame
+			frameUsed(i) = false;
+			warning(['Skipping image: ', num2str(i)]);
 			continue;
 		end
+		
+		viewId = viewId + 1;
 
 		% Estimate the camera pose of current view relative to the previous view.
 		% The pose is computed up to scale, meaning that the distance between
@@ -149,48 +174,52 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 			prevPointsConversion, currPointsConversion, ...
 			prevFrontIndex, currFrontIndex, indexPairs, cameraParams);
 		
-		% TODO remove this because it is no more needed with the update to the
-		% E estimating function.
-		% skipping image if we expect the pose estimation to be wrong.
-% 		if pointsForEEstimationCounter(i)/pointsForPoseEstimationCounter(i) >...
-% 				10 || validPtsFraction < .8
-% 			warning(['Skipping image ', num2str(i)]);
-% 			continue;
-% 		end
-		
 		% Get the table containing the previous camera pose.
-		prevPose = poses(vSet, i-1);
+		prevPose = poses(vSet, viewId - 1);
 		prevOrientation = prevPose.Orientation{1};
 		prevLocation    = prevPose.Location{1};
 		
-		% From the third image on, compute the relative scale
-		if i >= 2 && computeRelativeScaleBeforeBundleAdjustment
-% 			relativeScale = computeRelativeScale(vSet, i, cameraParams, maxAcceptedReprojectionError);
-			relativeScale = computeRelativeScaleFromGroundTruth(...
-				groundTruthPoses, relativeLoc, i, i - 1);
-			relativeLoc = relativeScale * relativeLoc;
-		end
-
-% 		disp(['E estimated with ', num2str(iterations), ' interactions']);
-		% Add the current view to the view set.
-		vSet = addView(vSet, i, 'Points', ...
-			currPointsConversion);
-		
-		addPoints(vWindow, i, currPoints, ...
-			currFeatures, ...
-			currPointsConversion);
-		
-		addConnection(vWindow, i - 1, i, indexPairs);
-
 		% Compute the current camera pose in the global coordinate system
 		% relative to the first view.
 		orientation = relativeOrient * prevOrientation;
 		location    = prevLocation + relativeLoc * prevOrientation;
-		vSet = updateView(vSet, i, 'Orientation', orientation, ...
+		
+		supportViewSet = addView(supportViewSet, viewId, ...
+			'Points', currPointsConversion, ...
+			'Orientation', orientation, ...
 			'Location', location);
 		
-		if i >= vWindow.WindowSize
-% 			vSet = addConnection(vSet, i - 1, i, 'Matches', indexPairs);
+		% store the matches between the current image and the previously
+		% analysed one
+		supportViewSet = addConnection(supportViewSet, viewId - 1, viewId, ...
+			'Matches', indexPairs);
+		
+		% From the third image on, compute the relative scale
+		if viewId > 2 && computeRelativeScaleBeforeBundleAdjustment
+			relativeScale = computeRelativeScale(...
+				supportViewSet, viewId, cameraParams, ...
+				maxAcceptedReprojectionError);
+% 			relativeScale = computeRelativeScaleFromGroundTruth(...
+% 				groundTruthPoses, relativeLoc, currId, prevId);
+			location = prevLocation + ...
+				relativeScale * relativeLoc * prevOrientation;
+			supportViewSet = updateView(supportViewSet, viewId, ...
+			'Location', location);
+		end
+		
+		% Add the current view to the view set.
+		vSet = addView(vSet, viewId, ...
+			'Points', currPointsConversion, ...
+			'Orientation', orientation, ...
+			'Location', location);
+		
+		addPoints(vWindow, viewId, currPoints, ...
+			currFeatures, ...
+			currPointsConversion);
+		
+		addConnection(vWindow, viewId - 1, viewId, indexPairs);
+		
+		if viewId >= vWindow.WindowSize
 			vSet = computeTrackAndCreateConnections(vSet, vWindow);
 
 			if performWindowedBundleAdjustment
@@ -206,8 +235,8 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 				[xyzPoints, ~] = triangulateMultiview(tracks, ...
 					camPoses, cameraParams);
 
-				% Fixed views
-				startFrame = max(1, i - vWindow.WindowSize);
+				% Fixed views. This is to keep the scale fixed
+				startFrame = max(1, viewId - vWindow.WindowSize);
 				fixedViews = [startFrame, startFrame + 1];
 				
 				% Refine the 3-D world points and camera poses.
@@ -222,9 +251,11 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 				reprojectionErrors(i) = mean(tmpReprojectionErrors);
 				% Store the refined camera poses.
 				vSet = updateView(vSet, camPoses);
+				supportViewSet = updateView(supportViewSet, camPoses);
 			end
 		end
 
+		prevId = currId;
 		prevFeatures = currFeatures;
 		prevPoints = currPoints;
 		prevPointsConversion = currPointsConversion;

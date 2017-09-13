@@ -27,10 +27,6 @@ function [locError, orientError] = ...
 	locError = zeros(len, 1);
 	orientError = zeros(len, 3);
 	
-	% If the GT's first camera orientation is different from eye(3), re-align
-	% every GT's camera orientation.
-	groundTruth = alignOrientation(groundTruth);
-	
 	for i = 1:len
 		currLocGT = groundTruth.Location{i};
 		currOrientGT = rotm2eul(groundTruth.Orientation{i}');
