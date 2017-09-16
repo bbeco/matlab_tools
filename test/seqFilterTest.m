@@ -16,25 +16,31 @@ groundTruthPoses = alignOrientation(groundTruthPoses);
 
 resultBaseFolder = fullfile('../results/seqFilterTest');
 
-paramTable = table({'name'}, {'file'}, 0, ...
-	'VariableNames', {'DataSeriesName', 'OutputFileName', 'AngularThreshold'});
+paramTable = table({'name'}, {'file'}, 0, 0, ...
+	'VariableNames', {'DataSeriesName', 'OutputFileName', 'AngularThreshold',...
+	'WindowSize'});
 repmat(paramTable, length(0:5:30), 1);
-i = 1;
-for threshold = 10
-	paramTable(i, :) = table(...
-		{['threshold ', num2str(threshold)]}, ...
-		{fullfile(resultBaseFolder, [num2str(threshold), 'threshold'])}, ...
-		threshold, 'VariableNames', ...
-		{'DataSeriesName', 'OutputFileName', 'AngularThreshold'} ...
-		);
-	i = i + 1;
+thresholdList = [4:2:15];
+windowSizeList = [3, 4, 5, 6];
+j = 0;
+for windowSize = windowSizeList
+	i = 1;
+	for threshold = thresholdList
+		paramTable(j*size(thresholdList, 2) + i, :) = table(...
+			{['t_', num2str(threshold), '_W_', num2str(windowSize)]}, ...
+			{fullfile(resultBaseFolder, ...
+			[num2str(threshold), 'threshold_Window', num2str(windowSize)])}, ...
+			threshold, windowSize, 'VariableNames', ...
+			{'DataSeriesName', 'OutputFileName', 'AngularThreshold', 'WindowSize'} ...
+			);
+		i = i + 1;
+	end
+	j = j + 1;
 end
-
-paramTable = paramTable(1, :);
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = true;
+enableFigures = false;
 repetitions = 1;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
@@ -53,14 +59,15 @@ prefilterLLKeyPoints = false;
 maxLatitudeAngle = 60; %degrees
 
 % Bundle Adjustment parameters
-performGlobalBundleAdjustment = false;
+performGlobalBundleAdjustment = true;
 bundleAdjustmentAbsoluteTolerance = 1e-05;
 bundleAdjustmentRelativeTolerance = 1e-09;
 bundleAdjustmentMaxIterations = 300;
 
 % Windowed bundle adjustment parameters
-performWindowedBundleAdjustment = false;
-windowSize = 2;
+performWindowedBundleAdjustment = true;
+% see paramTable for this
+% windowSize = 2;
 
 % Sequence filter parameters
 % ... see experiment params
@@ -68,9 +75,9 @@ seqFilterQuantile = 0.8;
 % **********************************
 
 imds = imageDatastore(imageDir);
-% seqLength = numel(imds.Files);
+seqLength = numel(imds.Files);
 %The following is the actual number of images processed
-seqLength = 35;
+% seqLength = 121;
 pointsForEEstimationCounter = cell(repetitions, size(paramTable, 1));
 pointsForPoseEstimationCounter = cell(repetitions, size(paramTable, 1));
 frameUsed = cell(repetitions, size(paramTable, 1));
@@ -93,7 +100,7 @@ resultCItable = table({zeros(1, seqLength)}, {zeros(1, seqLength)}, {zeros(1, se
 	'VariableNames', {'LocErrorMeanCI', 'OrientErrorXmeanCI', 'OrientErrorYmeanCI', 'OrientErrorZmeanCI'});
 resultCItable = repmat(resultCItable, height(paramTable), 1);
 
-for k = 1:height(paramTable)
+parfor k = 1:height(paramTable)
 	% Setting same seed for each experiment
 	rng('default');
 	
@@ -112,14 +119,17 @@ for k = 1:height(paramTable)
 			zMin, ...
 			prefilterLLKeyPoints, maxLatitudeAngle, ...
 			performGlobalBundleAdjustment, performWindowedBundleAdjustment, ...
-			windowSize, groundTruthPoses, seqLength, ...
+			paramTable.WindowSize(k), groundTruthPoses, seqLength, ...
 			bundleAdjustmentAbsoluteTolerance, ...
 			bundleAdjustmentRelativeTolerance, bundleAdjustmentMaxIterations,...
 			paramTable.AngularThreshold(k), seqFilterQuantile);
 		
+		% setting the same reference for both the estimated poses and ground
+		% truth.
 		[vSet, ~] = normalizeCameraPosesWithGroundTruth(vSet, ...
 			groundTruthPoses(frameUsed{i, k}, :));
 
+		%% Writing results
 		[locError{i, k}, orientError{i, k}] = writeExperimentResultsOnFile(...
 			[paramTable.OutputFileName{k}, '_rep', num2str(i), '.xlsx'], ...
 			vSet, groundTruthPoses, pointsForEEstimationCounter{i, k}, ...
@@ -164,7 +174,9 @@ for k = 1:height(paramTable)
 		angularXerror{i, k} = orientError{i, k}(:, 3);
 		
 	end
-	
+end
+
+for k = 1:height(paramTable)
 	% saving sum of absolute errors
 	sumAbsLocError(k) = mean(sum(cat(2, locError{:, k})));
 	sumAbsLocErrorCI(k) = computeMeanConfidenceInterval(...
@@ -181,45 +193,45 @@ for k = 1:height(paramTable)
 end
 
 %% sum absolute errors
-% figure;
-% tmp = sumAbsLocError./sum(cat(1, frameUsed{1, :}), 2);
-% errorbar(tmp, sumAbsLocErrorCI);
-% title('sum of absolute location errrors');
-% axis([0, size(paramTable, 1) + 1, 0, 1]);
-% axis 'auto y';
-% xlabel('Experiment number');
-% saveas(gcf, fullfile(resultBaseFolder, 'sumAbsLocError.fig'));
-% saveas(gcf, fullfile(resultBaseFolder, 'sumAbsLocError.pdf'));
-% 
-% figure;
-% tmp = sumAbsOrientError(:, 1)./sum(cat(1, frameUsed{1, :}), 2);
-% errorbar(tmp, sumAbsOrientErrorCI(:, 1));
-% title('sum of absolute X orientation errors');
-% axis([0, size(paramTable, 1) + 1, 0, 1]);
-% axis 'auto y';
-% xlabel('Experiment number');
-% saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientXError.fig'));
-% saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientXError.pdf'));
-% 
-% figure;
-% tmp = sumAbsOrientError(:, 2)./sum(cat(1, frameUsed{1, :}), 2);
-% errorbar(tmp, sumAbsOrientErrorCI(:, 2));
-% title('sum of absolute Y orientation errors');
-% axis([0, size(paramTable, 1) + 1, 0, 1]);
-% axis 'auto y';
-% xlabel('Experiment number');
-% saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientYError.fig'));
-% saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientYError.pdf'));
-% 
-% figure;
-% tmp = sumAbsOrientError(:, 3)./sum(cat(1, frameUsed{1, :}), 2);
-% errorbar(tmp, sumAbsOrientErrorCI(:, 3));
-% title('sum of absolute Z orientation errors');
-% axis([0, size(paramTable, 1) + 1, 0, 1]);
-% axis 'auto y';
-% xlabel('Experiment number');
-% saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientZError.fig'));
-% saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientZError.pdf'));
+figure;
+tmp = sumAbsLocError./sum(cat(1, frameUsed{1, :}), 2);
+errorbar(tmp, sumAbsLocErrorCI);
+title('location errror per view');
+axis([0, size(paramTable, 1) + 1, 0, 1]);
+axis 'auto y';
+xlabel('Experiment number');
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsLocError.fig'));
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsLocError.pdf'));
+
+figure;
+tmp = sumAbsOrientError(:, 1)./sum(cat(1, frameUsed{1, :}), 2);
+errorbar(tmp, sumAbsOrientErrorCI(:, 1));
+title('X orientation error per view');
+axis([0, size(paramTable, 1) + 1, 0, 1]);
+axis 'auto y';
+xlabel('Experiment number');
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientXError.fig'));
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientXError.pdf'));
+
+figure;
+tmp = sumAbsOrientError(:, 2)./sum(cat(1, frameUsed{1, :}), 2);
+errorbar(tmp, sumAbsOrientErrorCI(:, 2));
+title('Y orientation error per view');
+axis([0, size(paramTable, 1) + 1, 0, 1]);
+axis 'auto y';
+xlabel('Experiment number');
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientYError.fig'));
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientYError.pdf'));
+
+figure;
+tmp = sumAbsOrientError(:, 3)./sum(cat(1, frameUsed{1, :}), 2);
+errorbar(tmp, sumAbsOrientErrorCI(:, 3));
+title('Z orientation error per view');
+axis([0, size(paramTable, 1) + 1, 0, 1]);
+axis 'auto y';
+xlabel('Experiment number');
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientZError.fig'));
+saveas(gcf, fullfile(resultBaseFolder, 'sumAbsOrientZError.pdf'));
 
 %% Saving environment
 save(fullfile(resultBaseFolder, 'workspace.mat'));
