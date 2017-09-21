@@ -5,7 +5,7 @@ function rImg = rotateLL(img, x, y, z)
 % 	The algorithm works as follow: for each point in the rotated image
 % 		1) projects it to on the unit sphere and compute the x, y, z coordinates
 % 		2) perform the rotations around the X, Y and Z-axes (in this order).
-% 			NB: it performs a rotation in the OPPOSITE direction because when 
+% 			NB: it performs a rotation in the OPPOSITE direction because we 
 % 			are moving from the rotated image to the original one in order to 
 % 			sample pixel (see backward warping).
 % 		3) convert the point back in LL coordinates
@@ -36,8 +36,11 @@ function rImg = rotateLL(img, x, y, z)
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
 
-    [height, width] = size(img);
-    rImg = zeros(height, width, 'uint8');
+    [height, width, c] = size(img);
+	if c > 1
+		error('img is expected to be a single channel gray scale image');
+	end
+    rImg = zeros(height, width, 'like', img);
 	%inverting all the angles for backward warping
 	x = -x;
 	y = -y;
