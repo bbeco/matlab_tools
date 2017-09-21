@@ -62,7 +62,14 @@ function relativeScale = computeRelativeScale(vSet, viewId, cameraParams, ...
 	
 	% This creates all the possible combination of the indexes used for the
 	% scale estimation.
-	indexPairs = nchoosek(1:size(prevWorldPoints, 1), 2);
+	l = size(prevWorldPoints, 1);
+	if l < 2
+		warning(['Unable too compute relative scale: too few points']);
+		relativeScale = 1;
+		return;
+	end
+	
+	indexPairs = nchoosek(1:l, 2);
 	
 	l = size(indexPairs, 1);
 	scaleEstimation = zeros(l, 1);

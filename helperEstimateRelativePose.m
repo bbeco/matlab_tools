@@ -83,9 +83,14 @@ function [relOrientation, relLocation, validPtsFraction, inliersIndex,...
 		% If the following ratio is less than maxInliersRatio and the valid
 		% points fraction is above .8, the estimated pose is likely to be
 		% correct
-		if pointsForEEstimationCounter / pointsForPoseEstimationCounter <...
-				maxInliersRatio && ...
-				validPtsFraction > .8
+% 		if pointsForEEstimationCounter / pointsForPoseEstimationCounter <...
+% 				maxInliersRatio && ...
+% 				validPtsFraction > .8
+% 			indexPairs = indexPairsNoFront;
+% 			return;
+% 		end
+
+		if validPtsFraction > .8
 			indexPairs = indexPairsNoFront;
 			return;
 		end
