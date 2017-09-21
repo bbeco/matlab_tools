@@ -1,4 +1,4 @@
-function rImg = rotateLL(img, x, y, z)
+function rImg = rotateLL(img, rot)
 %	This function perform a rotation of the LL encoded image img accordingly to 
 %	the angles provided (in radians).
 %
@@ -40,26 +40,16 @@ function rImg = rotateLL(img, x, y, z)
 	if c > 1
 		error('img is expected to be a single channel gray scale image');
 	end
+	
     rImg = zeros(height, width, 'like', img);
-	%inverting all the angles for backward warping
-	x = -x;
-	y = -y;
-	z = -z;
 
     for i = 1:height
         for j = 1:width
 			%unmapping
-            rlat = pi/2 - i*pi/height;
-            rlong = j*2*pi/width - pi;
+			[rlat, rlong] = extractLLCoordinateFromImage(j, i, width, height);
 			
             p = LL2Cartesian(rlat,rlong);
-			
-            %rotation
-            Rx = [1 0 0; 0 cos(x) -sin(x); 0 sin(x) cos(x)];
-            Ry = [cos(y) 0 sin(y); 0 1 0; -sin(y) 0 cos(y)];
-            Rz = [cos(z) -sin(z) 0; sin(z) cos(z) 0; 0 0 1];
-            p = Rz*Ry*Rx*p;
-			
+			p = rot * p;
             [lat, long] = cartesian2LL(p);
 			
             %mapping

@@ -14,16 +14,14 @@ function [rImg1, rImg2] = rectifyImages(img1, img2, loc1, loc2, ...
 	n1 = n1/norm(n1);
 	alpha1 = asin(dot(x1, t));
 	rot1 = axisRot2mat(n1, alpha1);
-	euler1 = rotm2eul(rot1);
-	rImg1 = rotateLL(img1, euler1(3), euler1(2), euler1(1));
+	rImg1 = rotateLL(img1, rot1);
 	
 	x2 = [1, 0, 0] * orient2;
 	n2 = cross(x2, -t);
 	n2 = n2/norm(n2);
 	alpha2 = asin(dot(x2, -t));
 	rot2 = axisRot2mat(n2, alpha2);
-	euler2 = rotm2eul(rot2);
-	rImg2 = rotateLL(img2, euler2(3), euler2(2), euler2(1));
+	rImg2 = rotateLL(img2, rot2);
 	
 end
 
