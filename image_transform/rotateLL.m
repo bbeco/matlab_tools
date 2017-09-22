@@ -1,6 +1,6 @@
 function rImg = rotateLL(img, rot)
 %	This function perform a rotation of the LL encoded image img accordingly to 
-%	the angles provided (in radians).
+%	the rotation matrix provided.
 %
 % 	The algorithm works as follow: for each point in the rotated image
 % 		1) projects it to on the unit sphere and compute the x, y, z coordinates
@@ -42,7 +42,7 @@ function rImg = rotateLL(img, rot)
 	end
 	
     rImg = zeros(height, width, 'like', img);
-
+	
     for i = 1:height
         for j = 1:width
 			%unmapping

@@ -25,6 +25,6 @@ function [lat, long] = cartesian2LL(p)
 %	You should have received a copy of the GNU Lesser General Public License
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-    long = atan2(p(3), p(1));
+    long = atan2(p(1), p(3));
     lat = atan2(-p(2), sqrt(p(1)^2 + p(3)^2));
 end

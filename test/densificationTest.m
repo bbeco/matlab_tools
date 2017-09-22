@@ -7,6 +7,7 @@ addpath('dense_reconstruction');
 addpath('coordinate_transform');
 addpath('utils');
 addpath('ground_truth');
+addpath('display_images');
 
 % aligning orientations
 originalPoses = alignOrientation(originalPoses);
@@ -29,22 +30,13 @@ orient2 = originalPoses.Orientation{2};
 
 %% display results
 figure;
-subplot(1, 2, 1);
-imshow(img1);
-subplot(1, 2, 2);
-imshow(img2);
+imshowSideBySide(img1, img2);
 title('Original images');
 
 figure;
-subplot(1, 2, 1);
-imshow(rImg1);
-subplot(1, 2, 2);
-imshow(rImg2);
+imshowSideBySide(rImg1, rImg2);
 title('rectified images');
 
 figure;
-subplot(1, 2, 1);
-imshow(rImg1GT);
-subplot(1, 2, 2);
-imshow(rImg2GT);
+imshowSideBySide(rImg1GT, rImg2GT);
 title('rectified ground truth');
