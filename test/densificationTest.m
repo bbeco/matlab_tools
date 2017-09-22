@@ -15,7 +15,9 @@ rectifiedPosesGT = alignOrientation(rectifiedPosesGT);
 
 % original images
 img1 = rgb2gray(imread(fullfile(baseDir, '01.png')));
-img2 = rgb2gray(imread(fullfile(baseDir, '02.png')));
+img2 = rgb2gray(imread(fullfile(baseDir, '03.png')));
+
+[heigth, width] = size(img1);
 
 %ground truth rectified images
 rImg1GT = rgb2gray(imread(fullfile(baseDir, '01_gt.png')));
@@ -34,9 +36,16 @@ imshowSideBySide(img1, img2);
 title('Original images');
 
 figure;
-imshowSideBySide(rImg1, rImg2);
+imshow([rImg1; rImg2]);
+step = 70;
+for col = 1:step:width
+	line([col, col], [1, 2*heigth], 'Color', 'r');
+end
 title('rectified images');
 
 figure;
-imshowSideBySide(rImg1GT, rImg2GT);
+imshow([rImg1GT; rImg2GT]);
+for col = 1:step:width
+	line([col, col], [1, 2*heigth], 'Color', 'r');
+end
 title('rectified ground truth');
