@@ -33,7 +33,7 @@ function [x, y, z] = LL2Cartesian(lat, long)
     v(2) = -sin(lat);
 	v(3) = l*cos(long);
 
-    if nargout == 1
+    if nargout <= 1
         x = v;
     elseif nargout == 3
         x = v(1);
