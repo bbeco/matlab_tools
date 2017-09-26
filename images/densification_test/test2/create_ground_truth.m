@@ -6,7 +6,7 @@ Location = {
 % camera2
 [ -0.5776900053024292 -0.4781999886035919 0.0 ]
 % camera3
-[ -0.5776900053024292 -0.4781999886035919 0.0 ]
+[ -0.5776900053024292 -2.4781999588012695 2.0 ]
 };
 % Orientation
 Orientation = {
@@ -19,9 +19,9 @@ Orientation = {
  -3.77489612901627e-08 6.538309804682285e-08 -1.0;
  -0.5000001192092896 0.8660253286361694 7.549790126404332e-08 ]
 % camera3
-[ 0.8660253286361694 0.5000001192092896 0.0;
- -0.2500000298023224 0.43301263451576233 -0.866025447845459;
- -0.43301281332969666 0.75 0.4999999701976776 ]
+[ 1.0 0.0 0.0;
+ 0.0 0.4999999701976776 -0.866025447845459;
+ 0.0 0.866025447845459 0.4999999701976776 ]
 };
 originalPoses = table(ViewId, Orientation, Location);
 
@@ -44,5 +44,5 @@ Orientation = {
 };
 rectifiedPosesGT = table(ViewId, Orientation, Location);
 
-save('images/densification_test/test1/poses.mat', ...
+save('images/densification_test/test2/poses.mat', ...
 	'originalPoses', 'rectifiedPosesGT');
