@@ -23,7 +23,7 @@ function [rImg1, rImg2] = rectifyImages(img1, img2, loc1, loc2, ...
 	
 	% Determining the rotation axis and angle for each camera to have the x-axis
 	% aligned.
-% 	rot3 = eul2rotm([pi/2, 0, 0]);
+	rot3 = eul2rotm([pi/2, 0, 0]);
 	t = loc2 - loc1;
 	t = t/norm(t);
 	x1 = orient1 * [1, 0, 0]';
@@ -33,7 +33,7 @@ function [rImg1, rImg2] = rectifyImages(img1, img2, loc1, loc2, ...
 	rot11 = axisRot2mat(orient1' * n1', alpha1);
 	absrot11 = axisRot2mat(n1, alpha1);
 	% NB the rotation order is swapped to avoid gimbal lock
-	rImg1 = simple_rotateLL(img1, rot11);
+	rImg1 = rotateLL(img1, rot11 * rot3);
 	
 	x2 = orient2 * [1, 0, 0]';
 	n2 = cross(x2, t);
@@ -44,7 +44,7 @@ function [rImg1, rImg2] = rectifyImages(img1, img2, loc1, loc2, ...
 	% rotate second camera such that its z-axis is parallel to the other one's
 	rot22 = ((absrot11 * orient1)' * (absrot12 * orient2))';
 	
-	rImg2 = simple_rotateLL(img2, rot12 * rot22);
+	rImg2 = rotateLL(img2, rot12 * rot22 * rot3);
 	
 end
 

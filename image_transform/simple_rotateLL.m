@@ -1,21 +1,5 @@
 function rImg = rotateLL(img, rot)
-%	This function perform a rotation of the LL encoded image img accordingly to 
-%	the rotation matrix provided (in the premultiply form).
-%
-% 	The algorithm works as follow: for each point in the rotated image
-% 		1) projects it to on the unit sphere and compute the x, y, z coordinates
-% 		2) perform the rotations around the X, Y and Z-axes (in this order).
-% 			NB: it performs a rotation in the OPPOSITE direction because we 
-% 			are moving from the rotated image to the original one in order to 
-% 			sample pixel (see backward warping).
-% 		3) convert the point back in LL coordinates
-% 		4) sample the corresponding pixel from the original image.
-%	
-%	Input:
-%		-img: The original image in LL format
-%		-x: The value for the rotation around the x-axe
-%		-y: The value for the rotation around the y-axe
-%		-z: The value for the roation around the z-axe
+%	This is an old function I used for testing porpuses, it should not be used.
 %
 %	Output:
 %		rImg: The rotated LL image

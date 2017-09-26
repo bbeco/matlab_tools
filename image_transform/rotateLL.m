@@ -4,7 +4,7 @@ function rImg = rotateLL(img, rot)
 %
 % 	The algorithm works as follow: for each point in the rotated image
 % 		1) projects it to on the unit sphere and compute the x, y, z coordinates
-% 		2) perform the rotations around the X, Y and Z-axes (in this order).
+% 		2) perform the rotations according the rotation matrix rot
 % 			NB: it performs a rotation in the OPPOSITE direction because we 
 % 			are moving from the rotated image to the original one in order to 
 % 			sample pixel (see backward warping).
@@ -13,9 +13,7 @@ function rImg = rotateLL(img, rot)
 %	
 %	Input:
 %		-img: The original image in LL format
-%		-x: The value for the rotation around the x-axe
-%		-y: The value for the rotation around the y-axe
-%		-z: The value for the roation around the z-axe
+%		-rot: The rotation to apply to the camera.
 %
 %	Output:
 %		rImg: The rotated LL image
@@ -49,7 +47,9 @@ function rImg = rotateLL(img, rot)
 			[rlat, rlong] = extractLLCoordinateFromImage(j, i, width, height);
 			
             p = LL2Cartesian(rlat,rlong);
+			
 			p = rot * p;
+			
             [lat, long] = cartesian2LL(p);
 			
             %mapping
