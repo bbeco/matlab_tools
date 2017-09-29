@@ -49,7 +49,7 @@ function patches = createPatch(llImg, plat, plong, llwidth, llheight)
 	
 	% pre-computing the distance from the sphere's center to each patch's pixel.
 	distance = zeros(1, vMax);
-	% TODO optimize by reducing the distance vector length to one half (becouse
+	% TODO optimize by reducing the distance vector length to one half (because
 	% of simmetry)
 	for v = 1:vMax
 		distance(v) = sqrt(1 + k_v^2*(v0 - v)^2);
