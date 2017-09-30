@@ -5,7 +5,7 @@ addpath('coordinate_transform');
 img = rgb2gray(...
 	imread(fullfile('images/densification_test/test1/rec01_gt.png')));
 [height, width] = size(img);
-patch = createPatch(img, 70*pi/180, 0, width, height);
+patch = createPatch(img, 0, 0, width, height);
 figure
 subplot(2, 1, 1);
 imshow(img);
@@ -17,7 +17,7 @@ while true
 	if button == 27
 		break;
 	end
-	round([x, y]);
+	round([x, y])
 	[lat, long] = extractLLCoordinateFromImage(x, y, width, height);
 	patch = createPatch(img, lat, long, width, height);
 	imshow(patch{1}, 'Parent', ax);

@@ -47,30 +47,49 @@ function patches = createPatch(llImg, plat, plong, llwidth, llheight)
 	
 	patches = cell(1, length(plong));
 	
-	% pre-computing the distance from the sphere's center to each patch's pixel.
-	distance = zeros(1, vMax);
-	% TODO optimize by reducing the distance vector length to one half (becouse
-	% of simmetry)
-	for v = 1:vMax
-		distance(v) = sqrt(1 + k_v^2*(v0 - v)^2);
-	end
-	
 	for k = 1:length(plong)
 		patches{k} = zeros(vMax, uMax, 'like', llImg);
+		
+		% find the u and v directions that lie on the patch's plane
+		r = LL2Cartesian(plat, plong(k));
+		vdir = zeros(3, 1);
+% 		if r(2) ~= 0
+% 			udir = [1, -r(1)/r(2), 0];
+% 		else
+% 			udir = [1, 0, 0];
+% 		end
+% 		vdir(3) = 1;
+% 		vdir(2) = -vdir(3)/(1 - udir(2)/udir(1))*r(2);
+% 		vdir(1) = -udir(2)/udir(1)*vdir(2);
+		
+		% setting the u and v vector to be the pixel size
+% 		udir = udir/norm(udir);
+% 		vdir = vdir/norm(vdir);
+		if plat == 0
+			vdir = [0 1 0]';
+		elseif plat == pi/2 || plat == -pi/2
+			vdir = [0 0 -1]';
+		else
+			vdir(1) = 1;
+			vdir(3) = r(3)/r(1);
+			vdir(2) = -(r(1) + r(3)^2/r(1))/r(2);
+			vdir = vdir/norm(vdir);
+		end
+		
+		if abs(plong) == pi/2 || plong == 0
+			udir = [1 0 0]';
+			vdir = [0 1 0]';
+		else
+			udir = [1, 0, -r(1)/r(3)]';
+			udir = udir/norm(udir);
+		end
+		
 		for v = 1:vMax
-			lat = plat + atan(k_v*(v0 - v));
-			if lat > 1.5708
-				lat = lat - 1.5708;
-			elseif lat < -1.5708
-				lat = 0.0584 + lat;
-			end
 			for u = 1:uMax
-				long = plong + atan(k_u*(u - u0)/(cos(lat)*distance(v)));
-				p = LL2Cartesian(lat, long);
-				[llat, llong] = cartesian2LL(p);
-				% TODO change this with bilinear interpolation
+				p = r + k_u*(u - u0)*udir + k_v*(v - v0)*vdir;
+				[lat, long] = cartesian2LL(p);
 				[llu, llv] = ll2equirectangular(lat, long, llwidth, llheight);
-				patches{k}(v, u) = llImg(llv,  llu);
+				patches{k}(v, u) = llImg(llv, llu);
 			end
 		end
 	end
