@@ -52,37 +52,16 @@ function patches = createPatch(llImg, plat, plong, llwidth, llheight)
 		
 		% find the u and v directions that lie on the patch's plane
 		r = LL2Cartesian(plat, plong(k));
-		vdir = zeros(3, 1);
-% 		if r(2) ~= 0
-% 			udir = [1, -r(1)/r(2), 0];
-% 		else
-% 			udir = [1, 0, 0];
-% 		end
-% 		vdir(3) = 1;
-% 		vdir(2) = -vdir(3)/(1 - udir(2)/udir(1))*r(2);
-% 		vdir(1) = -udir(2)/udir(1)*vdir(2);
+		vdir = [0 1 0]';
+		udir = [1 0 0]';
 		
-		% setting the u and v vector to be the pixel size
-% 		udir = udir/norm(udir);
-% 		vdir = vdir/norm(vdir);
-		if plat == 0
-			vdir = [0 1 0]';
-		elseif plat == pi/2 || plat == -pi/2
-			vdir = [0 0 -1]';
-		else
-			vdir(1) = 1;
-			vdir(3) = r(3)/r(1);
-			vdir(2) = -(r(1) + r(3)^2/r(1))/r(2);
-			vdir = vdir/norm(vdir);
-		end
+		% computing the rotation for the u and v directions
+		a = LL2Cartesian(0, plong(k) + pi/2);
+		rot = axisRot2mat(a, plat);
 		
-		if abs(plong) == pi/2 || plong == 0
-			udir = [1 0 0]';
-			vdir = [0 1 0]';
-		else
-			udir = [1, 0, -r(1)/r(3)]';
-			udir = udir/norm(udir);
-		end
+		% we have to rotate udir about the y axis also by plong(k)
+		udir = rot * eul2rotm([0 plong(k) 0]) * udir;
+		vdir = rot * vdir;
 		
 		for v = 1:vMax
 			for u = 1:uMax

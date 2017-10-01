@@ -2,9 +2,11 @@ clear
 addpath('utils');
 addpath('dense_reconstruction');
 addpath('coordinate_transform');
-img = rgb2gray(...
-	imread(fullfile('images/densification_test/test1/rec01_gt.png')));
-[height, width] = size(img);
+img = imread(fullfile('images/densification_test/test3/rImg1.jpg'));
+[height, width, channels] = size(img);
+if channels > 1
+	img = rgb2gray(img);
+end
 patch = createPatch(img, 0, 0, width, height);
 figure
 subplot(2, 1, 1);
@@ -17,7 +19,7 @@ while true
 	if button == 27
 		break;
 	end
-	round([x, y])
+	round([x, y]);
 	[lat, long] = extractLLCoordinateFromImage(x, y, width, height);
 	patch = createPatch(img, lat, long, width, height);
 	imshow(patch{1}, 'Parent', ax);
