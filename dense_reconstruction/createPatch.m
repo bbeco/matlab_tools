@@ -1,4 +1,4 @@
-function patches = createPatch(llImg, plat, plong, llwidth, llheight)
+function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheight)
 	%CREATEPATCH Compute the image patch for window matching algorithm
 	%   This function projects an equirectangular image's area into a window
 	%   (patch). The patch represents an input suitable for block matching
@@ -31,11 +31,11 @@ function patches = createPatch(llImg, plat, plong, llwidth, llheight)
 	%
 
 	% The patch size in the same unit of the 3D sphere radius.
-	patchSize = 1;
+	patchSize = 0.1;
 	
 	% The patch size in pixel
-	uMax = 601;
-	vMax = 601;
+	uMax = 7;
+	vMax = 7;
 	
 	% The patch's principal point
 	u0 = ceil(uMax/2);
@@ -46,7 +46,6 @@ function patches = createPatch(llImg, plat, plong, llwidth, llheight)
 	k_v = patchSize/vMax;
 	
 	patches = cell(1, length(plong));
-	
 	for k = 1:length(plong)
 		patches{k} = zeros(vMax, uMax, 'like', llImg);
 		
@@ -70,6 +69,13 @@ function patches = createPatch(llImg, plat, plong, llwidth, llheight)
 				[llu, llv] = ll2equirectangular(lat, long, llwidth, llheight);
 				patches{k}(v, u) = llImg(llv, llu);
 			end
+		end
+	end
+	
+	if nargout > 1
+		patches_sq = cell(1, length(plong));
+		for k = 1:length(plong)
+			patches_sq{k} = patches{k}.^2;
 		end
 	end
 end

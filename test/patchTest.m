@@ -2,6 +2,7 @@ clear
 addpath('utils');
 addpath('dense_reconstruction');
 addpath('coordinate_transform');
+addpath('geometry');
 img = imread(fullfile('images/densification_test/test3/rImg1.jpg'));
 [height, width, channels] = size(img);
 if channels > 1
