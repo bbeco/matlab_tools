@@ -40,6 +40,7 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 	
 	disparityMap = zeros(r, c, 2);
 	for u = 1:c
+		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		%once we now the equipolar line, we can extract all the pathces
 		%from the other image
 		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
@@ -51,12 +52,13 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 			
 			min_v = v - dm_maxDisparity;
 			max_v = v + dm_maxDisparity;
-			
+			lambda = dm_regularization / (max_v - min_v + 1);
 			err = 1e30;
 			depth = 0;
 			
 			for k = min_v:max_v
-				delta = patchL .* patchesR{k} / (sum(patchesR_sq{k}(:)) * sum(patchL_sq(:)));
+				k = mod(k, r) + 1;
+				delta = patchL{1} .* patchesR{k} / (sum(patchesR_sq{k}(:)) * sum(patchL_sq{1}(:)));
 				
 				tmp_err = mean(delta(:));
 				d3 = k - v;

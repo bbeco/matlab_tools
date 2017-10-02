@@ -45,21 +45,21 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 	k_u = patchSize/uMax;
 	k_v = patchSize/vMax;
 	
-	patches = cell(1, length(plong));
-	for k = 1:length(plong)
-		patches{k} = zeros(vMax, uMax, 'like', llImg);
+	patches = cell(1, length(plat));
+	for k = 1:length(plat)
+		patches{k} = zeros(vMax, uMax, 'double');
 		
 		% find the u and v directions that lie on the patch's plane
-		r = LL2Cartesian(plat, plong(k));
+		r = LL2Cartesian(plat(k), plong);
 		vdir = [0 1 0]';
 		udir = [1 0 0]';
 		
 		% computing the rotation for the u and v directions
-		a = LL2Cartesian(0, plong(k) + pi/2);
-		rot = axisRot2mat(a, plat);
+		a = LL2Cartesian(0, plong + pi/2);
+		rot = axisRot2mat(a, plat(k));
 		
 		% we have to rotate udir about the y axis also by plong(k)
-		udir = rot * eul2rotm([0 plong(k) 0]) * udir;
+		udir = rot * eul2rotm([0 plong 0]) * udir;
 		vdir = rot * vdir;
 		
 		for v = 1:vMax
@@ -72,9 +72,11 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 		end
 	end
 	
+	
+	
 	if nargout > 1
-		patches_sq = cell(1, length(plong));
-		for k = 1:length(plong)
+		patches_sq = cell(1, length(plat));
+		for k = 1:length(plat)
 			patches_sq{k} = patches{k}.^2;
 		end
 	end
