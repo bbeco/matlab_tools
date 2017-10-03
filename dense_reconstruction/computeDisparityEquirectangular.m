@@ -1,4 +1,4 @@
-function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization)
+function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, column)
 %COMPUTEDISPARITYEQUIRECTANGULAR Compute disparity map for an LL image pair
 %   This function is inspired by computeDisparitySlow of HDR Toolbox.
 	if(~exist('dm_patchSize', 'var'))
@@ -33,15 +33,24 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 	
 	[r, c, col] = size(imgL);
 	
+	% Debugging purposes
+	if ~exist(column)
+		min_u = 1;
+		max_u = c;
+	else
+		min_u = column;
+		max_u = column;
+	end
+	
 	if col > 1
 		imgL = rbg2gray(imgL);
 		imgR = rgb2gray(imgR);
 	end
 	
 	disparityMap = zeros(r, c, 2);
-	for u = 1:c
+	for u = min_u:max_u
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
-		%once we now the equipolar line, we can extract all the pathces
+		%once we now the epipolar line, we can extract all the pathces
 		%from the other image
 		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
 		[patchesR, patchesR_sq] = createPatch(imgR, latR, longR, c, r);
@@ -50,14 +59,14 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 			[latL, longL] = extractLLCoordinateFromImage(u, v, c, r);
 			[patchL, patchL_sq] = createPatch(imgL, latL, longL, c, r);
 			
-			min_v = v - dm_maxDisparity;
-			max_v = v + dm_maxDisparity;
+			min_v = max([v - dm_maxDisparity, dm_patchSize + 1]);
+			max_v = min([v + dm_maxDisparity, c - dm_patchSize - 1]);
+			
 			lambda = dm_regularization / (max_v - min_v + 1);
 			err = 1e30;
 			depth = 0;
 			
 			for k = min_v:max_v
-				k = mod(k, r) + 1;
 				delta = patchL{1} .* patchesR{k} / (sum(patchesR_sq{k}(:)) * sum(patchL_sq{1}(:)));
 				
 				tmp_err = mean(delta(:));
