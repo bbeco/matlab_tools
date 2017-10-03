@@ -13,7 +13,7 @@ figure
 subplot(2, 1, 1);
 imshow(img);
 ax = subplot(2, 1, 2);
-imshow(patch{1});
+imshow(uint8(255 * mat2gray(patch{1})));
 
 while true
 	[x, y, button] = ginput(1);
@@ -23,5 +23,5 @@ while true
 	round([x, y]);
 	[lat, long] = extractLLCoordinateFromImage(x, y, width, height);
 	patch = createPatch(img, lat, long, width, height);
-	imshow(patch{1}, 'Parent', ax);
+	imshow(uint8(255 * mat2gray(patch{1})), 'Parent', ax);
 end
