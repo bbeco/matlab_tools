@@ -31,11 +31,11 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 	%
 
 	% The patch size in the same unit of the 3D sphere radius.
-	patchSize = 0.1;
+	patchSize = 1;
 	
 	% The patch size in pixel
-	uMax = 7;
-	vMax = 7;
+	uMax = 601;
+	vMax = 601;
 	
 	% The patch's principal point
 	u0 = ceil(uMax/2);
