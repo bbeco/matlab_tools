@@ -1,4 +1,4 @@
-function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheight)
+function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheight, patchResolution)
 	%CREATEPATCH Compute the image patch for window matching algorithm
 	%   This function projects an equirectangular image's area into a window
 	%   (patch). The patch represents an input suitable for block matching
@@ -8,7 +8,11 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 	%		-llImg: the equirectangular image;
 	%		-plat: a 1-by-N vector of latitude coordinates of the patch's 
 	%			center;
-	%		-plong: the longitude coordinate of the patch's center.
+	%		-plong: the longitude coordinate of the patch's center;
+	%		-patchSize: the size to be used for the patch, in pixels. This is
+	%		used to compute the size of the image plane for the projection, the
+	%		size in sphere radious unit is computed according to this value and
+	%		the equirectangular resolution.
 	%
 	%	Output:
 	%		-patches: an 1-by-N cell array of patches, one for each LL
@@ -30,12 +34,17 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 	%	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	%
 
+	if ~exist('patchResolution', 'var')
+		patchResolution = 7;
+	end
+	
+	radPerPixel = max(2*pi/llwidth, pi/llheight);
 	% The patch size in the same unit of the 3D sphere radius.
-	patchSize = 1;
+	patchSize = 2*tan((patchResolution * radPerPixel)/2);
 	
 	% The patch size in pixel
-	uMax = 601;
-	vMax = 601;
+	uMax = patchResolution;
+	vMax = patchResolution;
 	
 	% The patch's principal point
 	u0 = ceil(uMax/2);

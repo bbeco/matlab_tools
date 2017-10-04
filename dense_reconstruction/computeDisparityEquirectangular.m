@@ -1,4 +1,4 @@
-function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, column)
+function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, column)
 %COMPUTEDISPARITYEQUIRECTANGULAR Compute disparity map for an LL image pair
 %   This function is inspired by computeDisparitySlow of HDR Toolbox.
 	if(~exist('dm_patchSize', 'var'))
@@ -11,6 +11,10 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 
 	if(~exist('dm_regularization', 'var'))
 		dm_regularization = 0.2;
+	end
+	
+	if(~exist('dm_alpha', 'var'))
+		dm_alpha = 0.05;
 	end
 
 	if(dm_maxDisparity < 0.0)
@@ -49,7 +53,6 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 	
 	disparityMap = zeros(r, c, 2);
 	for u = min_u:max_u
-		disp('Extracting patches');
 		%once we now the epipolar line, we can extract all the patches
 		%from the other image
 		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
@@ -67,25 +70,25 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 			max_v = min([v + dm_maxDisparity, r - dm_patchSize - 1]);
 			
 			lambda = dm_regularization / (max_v - min_v + 1);
-			err = 1e30;
+			corr = 0;
 			depth = 0;
 			
 			for k = min_v:max_v
-				delta = patchL{1} .* patchesR{k} / (sum(patchesR_sq{k}(:)) * sum(patchL_sq{1}(:)));
+				delta = patchL{1} .* patchesR{k} / sqrt(sum(patchesR_sq{k}(:)) * sum(patchL_sq{1}(:)));
 				
-				tmp_err = mean(delta(:));
+				tmp_corr = mean(delta(:));
 				d3 = k - v;
 					
-				tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
+				tmp_corr = tmp_corr - lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
 				
-				if tmp_err < err
-					err = tmp_err;
+				if tmp_corr > corr
+					corr = tmp_corr;
 					depth = d3;
 				end
 			end
 			
 			disparityMap(v, u, 1) = depth;
-			disparityMap(v, u, 2) = err;
+			disparityMap(v, u, 2) = corr;
 		end
 	end
 end

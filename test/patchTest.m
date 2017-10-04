@@ -3,12 +3,14 @@ addpath('utils');
 addpath('dense_reconstruction');
 addpath('coordinate_transform');
 addpath('geometry');
-img = imread(fullfile('images/densification_test/test3/rImg1.jpg'));
+img = imread(fullfile('images/densification_test/test1/rImg1_small.jpg'));
 [height, width, channels] = size(img);
 if channels > 1
 	img = rgb2gray(img);
 end
-patch = createPatch(img, 0, 0, width, height);
+
+patchResolution = 15;
+patch = createPatch(img, 0, 0, width, height, patchResolution);
 figure
 subplot(2, 1, 1);
 imshow(img);
@@ -22,6 +24,6 @@ while true
 	end
 	round([x, y]);
 	[lat, long] = extractLLCoordinateFromImage(x, y, width, height);
-	patch = createPatch(img, lat, long, width, height);
+	patch = createPatch(img, lat, long, width, height, patchResolution);
 	imshow(uint8(255 * mat2gray(patch{1})), 'Parent', ax);
 end
