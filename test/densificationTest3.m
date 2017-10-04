@@ -9,9 +9,16 @@ addpath('utils');
 addpath('ground_truth');
 addpath('display_images');
 
+<<<<<<< HEAD
 img1 = imread(fullfile(baseDir, 'rImg1_small.jpg'));
 img2 = imread(fullfile(baseDir, 'rImg2_small.jpg'));
 
+=======
+img1 = imread(fullfile(baseDir, 'rImg1.jpg'));
+img2 = imread(fullfile(baseDir, 'rImg2.jpg'));
+img1 = imresize(img1, 0.25);
+img2 = imresize(img2, 0.25);
+>>>>>>> 19083380c092c27ffe94ec52df21e5c5824d4e50
 [height, width] = size(img1);
 
 % disparity parameters
@@ -33,10 +40,19 @@ while true
 	if button == 27
 		break;
 	end
+<<<<<<< HEAD
 	x = round(x);
 	y = round(y);
 	[lat, long] = extractLLCoordinateFromImage(x, y, width, height);
 	disparityMap = computeDisparityEquirectangular(img1, img2, dm_patchSize, ...
 		dm_maxDisparity, dm_regularization, y);
 	plot(ax, x, y + disparityMap(x,y,1), 'r+', 'MarkerSize', 50);
+=======
+	x = round(x)
+	y = round(y)
+	[lat, long] = extractLLCoordinateFromImage(x, y, width, height);
+	disparityMap = computeDisparityEquirectangular(img1, img2, dm_patchSize, ...
+		dm_maxDisparity, dm_regularization);
+	plot(ax, x, y + disparityMap(x,y,1), 'r+', 'MarkerSize', 5);
+>>>>>>> 19083380c092c27ffe94ec52df21e5c5824d4e50
 end

@@ -47,6 +47,7 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 	
 	patches = cell(1, length(plat));
 	for k = 1:length(plat)
+% 		disp(['Creating patch: ', num2str(k), '/', num2str(length(plat))]);
 		patches{k} = zeros(vMax, uMax, 'double');
 		
 		% find the u and v directions that lie on the patch's plane
@@ -72,13 +73,11 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 		end
 	end
 	
-	
-	
-	if nargout > 1
+% 	if nargout > 1
 		patches_sq = cell(1, length(plat));
 		for k = 1:length(plat)
 			patches_sq{k} = patches{k}.^2;
 		end
-	end
+% 	end
 end
 
