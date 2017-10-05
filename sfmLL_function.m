@@ -7,7 +7,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		zMin, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, ...
 		performGlobalBundleAdjustment, performWindowedBundleAdjustment, ...
-		viewsWindowSize, imgNumber, ...
+		viewsWindowSize, firstFrame, lastFrame, ...
 		baAbsoluteTolerance, baRelativeTolerance, baMaxIterations, ...
 		seqFilterAngularThreshold, seqFilterQuantile)
 	
@@ -22,8 +22,9 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 % 	montage(imds.Files, 'Size', [4, 2]);
 
 	% Convert the images to grayscale.
-	images = cell(1, imgNumber);
-	parfor i = 1:imgNumber
+	imgNumber = lastFrame - firstFrame + 1;
+	images = cell(1, lastFrame);
+	parfor i = 1:lastFrame
 		I = readimage(imds, i);
 		images{i} = rgb2gray(I);
 	end
@@ -54,7 +55,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	
 	% The following saves which image has been used for pose estimation and
 	% which not.
-	frameUsed = ones(1, imgNumber, 'logical');
+	frameUsed = zeros(1, imgNumber, 'logical');
 	
 	% The following support view set is used to store every possible connection
 	% and track in order to estimate the relative scale for each translation
@@ -64,7 +65,8 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	%% Processing first image
 	% Load first image
 	disp('Processing image 1');
-	I = images{1};
+	I = images{firstFrame};
+	frameUsed(firstFrame) = true;
 
 	prevPoints = detectSURFFeatures(I);
 
@@ -111,7 +113,7 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 		prevPointsConversion);
 
 	%% Processing all the other images
-	for i = 2:imgNumber
+	for i = (firstFrame + 1):lastFrame
 		disp(['Processing image ', num2str(i)]);
 		% Undistort the current image.
 		I = images{i};
@@ -169,6 +171,9 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 			warning(['Skipping image: ', num2str(i)]);
 			continue;
 		end
+		
+		%from now on, the frame can no longer be discarded
+		frameUsed(i) = true;
 		
 		viewId = viewId + 1;
 
