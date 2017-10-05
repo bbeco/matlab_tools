@@ -82,11 +82,11 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 		end
 	end
 	
-% 	if nargout > 1
+	if nargout > 1
 		patches_sq = cell(1, length(plat));
 		for k = 1:length(plat)
 			patches_sq{k} = patches{k}.^2;
 		end
-% 	end
+	end
 end
 

@@ -3,7 +3,7 @@ addpath('utils');
 addpath('dense_reconstruction');
 addpath('coordinate_transform');
 addpath('geometry');
-img = imread(fullfile('images/densification_test/test1/rImg1_small.jpg'));
+img = imread(fullfile('images/densification_test/test1/rImg2_small.jpg'));
 [height, width, channels] = size(img);
 if channels > 1
 	img = rgb2gray(img);
