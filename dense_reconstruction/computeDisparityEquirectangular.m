@@ -74,9 +74,9 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 			depth = 0;
 			
 			for k = min_v:max_v
-				delta = patchL{1} .* patchesR{k} / sqrt(sum(patchesR_sq{k}(:)) * sum(patchL_sq{1}(:)));
+				delta = patchL{1} .* patchesR{k};
 				
-				tmp_corr = mean(delta(:));
+				tmp_corr = sum(delta(:))  / sqrt(sum(patchesR_sq{k}(:)) * sum(patchL_sq{1}(:)));
 				d3 = k - v;
 					
 				tmp_corr = tmp_corr - lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );

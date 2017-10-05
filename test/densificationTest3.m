@@ -19,7 +19,7 @@ img2 = imresize(img2, 0.5);
 
 % disparity parameters
 dm_patchSize = 15;
-dm_maxDisparity = 100;
+dm_maxDisparity = 50;
 dm_metric = 'NCC';
 dm_regularization = 0;
 dm_alpha = 0;
