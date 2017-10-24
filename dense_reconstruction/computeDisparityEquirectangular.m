@@ -84,7 +84,7 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 					
 				tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
 				
-				if tmp_err > err
+				if tmp_err < err
 					err = tmp_err;
 					depth = d3;
 				end

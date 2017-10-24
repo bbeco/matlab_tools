@@ -52,9 +52,9 @@ end
 title('rectified images');
 
 % disparity parameters
-dm_patchSize = 9;
+dm_patchSize = 15;
 % disparityList = 1:5:width;
-dm_maxDisparity = 60;
+dm_maxDisparity = 30;
 dm_metric = 'SSD';
 dm_regularization = 0;
 dm_alpha = 0.05;
@@ -68,7 +68,7 @@ disparityRange = [-dm_maxDisparity, dm_maxDisparity];
 		dm_patchSize, dm_maxDisparity, ...
 		dm_metric, dm_regularization, dm_alpha);
 figure
-imshow(dispLR, disparityRange);
+imshow(dispLR(:,:,1), disparityRange);
 % 
 % parfor i = 1:length(regularizationList)
 % 	dm_regularization = regularizationList(i);
