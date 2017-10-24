@@ -1,4 +1,4 @@
-function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, column)
+function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, column)
 %COMPUTEDISPARITYEQUIRECTANGULAR Compute disparity map for an LL image pair
 %   This function is inspired by computeDisparitySlow of HDR Toolbox.
 	if(~exist('dm_patchSize', 'var'))
@@ -56,12 +56,14 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 		%once we now the epipolar line, we can extract all the patches
 		%from the other image
 		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
-		[patchesR, patchesR_sq] = createPatch(imgR, latR, longR, c, r);
+		[patchesR, patchesR_sq] = createPatch(imgR, latR, longR, c, r, ...
+			dm_patchSize);
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		for v = (dm_patchSize + 1):(r - dm_patchSize - 1)
 % 			disp(['Processing row: ', num2str(v), '/', num2str(r)]);
 			[latL, longL] = extractLLCoordinateFromImage(u, v, c, r);
-			[patchL, patchL_sq] = createPatch(imgL, latL, longL, c, r);
+			[patchL, patchL_sq] = createPatch(imgL, latL, longL, c, r, ...
+				dm_patchSize);
 
 			d1 = disparityMap(v - 1, u, 1);
 			d2 = disparityMap(v, u - 1, 1);
@@ -70,25 +72,26 @@ function disparityMap = computeDisparityEquirectangular(imgL, imgR, dm_patchSize
 			max_v = min([v + dm_maxDisparity, r - dm_patchSize - 1]);
 			
 			lambda = dm_regularization / (max_v - min_v + 1);
-			corr = 0;
+			err = 1e30;
 			depth = 0;
 			
 			for k = min_v:max_v
-				delta = patchL{1} .* patchesR{k};
+				%SSD
+				delta = (patchL{1} - patchesR{k})^2;
 				
-				tmp_corr = sum(delta(:))  / sqrt(sum(patchesR_sq{k}(:)) * sum(patchL_sq{1}(:)));
+				tmp_err = sum(delta(:));
 				d3 = k - v;
 					
-				tmp_corr = tmp_corr - lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
+				tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
 				
-				if tmp_corr > corr
-					corr = tmp_corr;
+				if tmp_err > err
+					err = tmp_err;
 					depth = d3;
 				end
 			end
 			
 			disparityMap(v, u, 1) = depth;
-			disparityMap(v, u, 2) = corr;
+			disparityMap(v, u, 2) = err;
 		end
 	end
 end

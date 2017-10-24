@@ -35,11 +35,11 @@ function rImg = rotateLL(img, rot)
 %
 
     [height, width, c] = size(img);
-	if c > 1
-		error('img is expected to be a single channel gray scale image');
-	end
+% 	if c > 1
+% 		error('img is expected to be a single channel gray scale image');
+% 	end
 	
-    rImg = zeros(height, width, 'like', img);
+    rImg = zeros(height, width, c, 'like', img);
 	
     for i = 1:height
         for j = 1:width
@@ -58,7 +58,7 @@ function rImg = rotateLL(img, rot)
 			
 			%sampling
 % 			TODO use interpolation when sampling (interp?)
-            rImg(i, j) = img(max(1, floor(v)), max(1, floor(u)));
+            rImg(i, j, :) = img(max(1, floor(v)), max(1, floor(u)), :);
         end
     end
 end

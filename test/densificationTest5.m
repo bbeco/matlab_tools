@@ -50,7 +50,7 @@ parfor i = 1:length(regularizationList)
 	[dispLR, dispRL, maskLR, maskRL] = ...
 		computeDisparitySlowCC(im2double(img1), im2double(img2), dm_patchSize, dm_maxDisparity, ...
 		dm_metric, dm_regularization, dm_alpha);
-	disparityMapsList{i} = {{dispLR}, {dispRL}, {maskLR}, {maskRL}};
+	disparityMapsList{i} = {dispLR, dispRL, maskLR, maskRL};
 	% load(fullfile(resultsDir, 'workspace.mat'), 'disparityMap');
 % 	figure;
 	imshow(uint8(255*mat2gray(abs(dispLR(:,:,1)))));

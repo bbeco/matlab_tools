@@ -16,7 +16,8 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 	%
 	%	Output:
 	%		-patches: an 1-by-N cell array of patches, one for each LL
-	%			coordinate provided.
+	%			coordinate provided. Each of them is a patchSize-by-patchSize 
+	%			array of double.
 	%
 	%	Copyright 2017 Andrea Beconcini
 	%
@@ -34,12 +35,16 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 	%	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	%
 
-	if ~exist('patchResolution', 'var')
+	if exist('patchResolution', 'var')
+		if mod(patchResolution, 2) == 0 || patchResolution < 1
+			error(['Invalid patchResolution: ', num2str(patchResolution)]);
+		end
+	else
 		patchResolution = 7;
 	end
 	
 	radPerPixel = max(2*pi/llwidth, pi/llheight);
-	% The patch size in the same unit of the 3D sphere radius.
+	% This is the physical patch size in the same unit of the 3D sphere radius.
 	patchSize = 2*tan((patchResolution * radPerPixel)/2);
 	
 	% The patch size in pixel
