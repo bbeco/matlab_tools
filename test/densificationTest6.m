@@ -16,10 +16,10 @@ groundTruthPoses = alignOrientation(groundTruthPoses);
 color1 = imread(fullfile(baseDir, 'll1.png'));
 color2 = imread(fullfile(baseDir, 'll2.png'));
 
-[height, width, ~] = size(color1);
-
 color1 = imresize(color1, 0.25);
 color2 = imresize(color2, 0.25);
+
+[height, width, ~] = size(color1);
 
 gray1 = rgb2gray(color1);
 gray2 = rgb2gray(color2);
@@ -43,18 +43,18 @@ for col = 1:step:width
 	line([col, col], [1, 2*height], 'Color', 'r');
 end
 title('rectified images');
-
-figure
-imshow([gray1; gray2]);
-for col = 1:step:width
-	line([col, col], [1, 2*height], 'Color', 'r');
-end
-title('rectified images');
+% 
+% figure
+% imshow([gray1; gray2]);
+% for col = 1:step:width
+% 	line([col, col], [1, 2*height], 'Color', 'r');
+% end
+% title('rectified images');
 
 % disparity parameters
 dm_patchSize = 15;
 % disparityList = 1:5:width;
-dm_maxDisparity = 30;
+dm_maxDisparity = 180;
 dm_metric = 'SSD';
 dm_regularization = 0;
 dm_alpha = 0.05;
@@ -67,8 +67,9 @@ disparityRange = [-dm_maxDisparity, dm_maxDisparity];
 		computeDisparityEquirectangularCC(im2double(gray1), im2double(gray2), ...
 		dm_patchSize, dm_maxDisparity, ...
 		dm_metric, dm_regularization, dm_alpha);
+% [dispLR, ~] = computeDisparityEquirectangular(gray1, gray2, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha);
 figure
-imshow(dispLR(:,:,1), disparityRange);
+imshow(mat2gray(abs(dispLR(:,:,1))).*maskLR);
 % 
 % parfor i = 1:length(regularizationList)
 % 	dm_regularization = regularizationList(i);

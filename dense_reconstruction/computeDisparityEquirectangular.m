@@ -53,16 +53,16 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 	
 	disparityMap = zeros(r, c, 2);
 	for u = min_u:max_u
-		%once we now the epipolar line, we can extract all the patches
-		%from the other image
+		%once we know the epipolar line, we can extract all the patches
+		%from the other images
 		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
-		[patchesR, patchesR_sq] = createPatch(imgR, latR, longR, c, r, ...
+		patchesR = createPatch(imgR, latR, longR, c, r, ...
 			dm_patchSize);
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		for v = (dm_patchSize + 1):(r - dm_patchSize - 1)
 % 			disp(['Processing row: ', num2str(v), '/', num2str(r)]);
 			[latL, longL] = extractLLCoordinateFromImage(u, v, c, r);
-			[patchL, patchL_sq] = createPatch(imgL, latL, longL, c, r, ...
+			patchL = createPatch(imgL, latL, longL, c, r, ...
 				dm_patchSize);
 
 			d1 = disparityMap(v - 1, u, 1);
@@ -77,7 +77,7 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 			
 			for k = min_v:max_v
 				%SSD
-				delta = (patchL{1} - patchesR{k})^2;
+				delta = (patchL{1} - patchesR{k}).^2;
 				
 				tmp_err = sum(delta(:));
 				d3 = k - v;

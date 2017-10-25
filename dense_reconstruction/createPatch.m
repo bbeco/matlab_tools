@@ -77,6 +77,7 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 		udir = rot * eul2rotm([0 plong 0]) * udir;
 		vdir = rot * vdir;
 		
+        llImg = im2double(llImg);
 		for v = 1:vMax
 			for u = 1:uMax
 				p = r + k_u*(u - u0)*udir + k_v*(v - v0)*vdir;
