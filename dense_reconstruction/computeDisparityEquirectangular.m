@@ -49,20 +49,22 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 	if col > 1
 		imgL = rbg2gray(imgL);
 		imgR = rgb2gray(imgR);
-	end
+    end
 	
+    dm_alpha_inv = (1.0 - dm_alpha);
+    
 	disparityMap = zeros(r, c, 2);
 	for u = min_u:max_u
 		%once we know the epipolar line, we can extract all the patches
 		%from the other images
 		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
-		patchesR = createPatch(imgR, latR, longR, c, r, ...
+		[patchesR, ~, patchesR_dx] = createPatch(imgR, latR, longR, c, r, ...
 			dm_patchSize);
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		for v = (dm_patchSize + 1):(r - dm_patchSize - 1)
 % 			disp(['Processing row: ', num2str(v), '/', num2str(r)]);
 			[latL, longL] = extractLLCoordinateFromImage(u, v, c, r);
-			patchL = createPatch(imgL, latL, longL, c, r, ...
+			[patchL, ~, patchL_dx] = createPatch(imgL, latL, longL, c, r, ...
 				dm_patchSize);
 
 			d1 = disparityMap(v - 1, u, 1);
@@ -71,7 +73,10 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 			min_v = max([v - dm_maxDisparity, dm_patchSize + 1]);
 			max_v = min([v + dm_maxDisparity, r - dm_patchSize - 1]);
 			
-			lambda = dm_regularization / (max_v - min_v + 1);
+            % if we use the sum of the SSD response, decomment this
+            % otherwise leave it as it is.
+			%lambda = dm_regularization / (max_v - min_v + 1);
+            lambda = dm_regularization;
 			err = 1e30;
 			depth = 0;
 			
@@ -79,7 +84,9 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 				%SSD
 				delta = (patchL{1} - patchesR{k}).^2;
 				
-				tmp_err = sum(delta(:));
+                delta_dx_sq = (patchL_dx{1} - patchesR_dx{k}).^2;
+                
+				tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
 				d3 = k - v;
 					
 				tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );

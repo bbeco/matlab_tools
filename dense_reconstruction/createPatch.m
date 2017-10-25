@@ -1,4 +1,4 @@
-function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheight, patchResolution)
+function [patches, patches_sq, patches_dx] = createPatch(llImg, plat, plong, llwidth, llheight, patchResolution)
 	%CREATEPATCH Compute the image patch for window matching algorithm
 	%   This function projects an equirectangular image's area into a window
 	%   (patch). The patch represents an input suitable for block matching
@@ -92,6 +92,15 @@ function [patches, patches_sq] = createPatch(llImg, plat, plong, llwidth, llheig
 		patches_sq = cell(1, length(plat));
 		for k = 1:length(plat)
 			patches_sq{k} = patches{k}.^2;
+		end
+    end
+    
+    if nargout > 2
+        kernelX = [-1, 0, 1; -2, 0, 2; -1,  0, 1];
+        patches_dx = cell(1, length(plat));
+        for k = 1:length(plat)
+            patches_dx{k}(:,:,1) = imfilter(patches{k}, kernelX,  'same');
+			patches_dx{k}(:,:,2) = imfilter(patches{k}, kernelX',  'same');
 		end
 	end
 end

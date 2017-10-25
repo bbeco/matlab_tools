@@ -56,7 +56,7 @@ dm_patchSize = 15;
 % disparityList = 1:5:width;
 dm_maxDisparity = 180;
 dm_metric = 'SSD';
-dm_regularization = 0;
+dm_regularization = 0.2;
 dm_alpha = 0.05;
 
 disparityRange = [-dm_maxDisparity, dm_maxDisparity];
