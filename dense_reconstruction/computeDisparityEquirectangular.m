@@ -54,21 +54,25 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
     dm_alpha_inv = (1.0 - dm_alpha);
     
 	disparityMap = zeros(r, c, 2);
-	for u = min_u:max_u
+	%temporary variables to use parfor
+	depthMap = zeros(r, c);
+	errorMap = zeros(r, c);
+	parfor u = min_u:max_u
 		%once we know the epipolar line, we can extract all the patches
 		%from the other images
 		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
-		[patchesR, ~, patchesR_dx] = createPatch(imgR, latR, longR, c, r, ...
+		patchesR = createPatch(imgR, latR, longR, c, r, ...
 			dm_patchSize);
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		for v = (dm_patchSize + 1):(r - dm_patchSize - 1)
 % 			disp(['Processing row: ', num2str(v), '/', num2str(r)]);
 			[latL, longL] = extractLLCoordinateFromImage(u, v, c, r);
-			[patchL, ~, patchL_dx] = createPatch(imgL, latL, longL, c, r, ...
+			patchL = createPatch(imgL, latL, longL, c, r, ...
 				dm_patchSize);
 
-			d1 = disparityMap(v - 1, u, 1);
-			d2 = disparityMap(v, u - 1, 1);
+			%removed to use parfor
+% 			d1 = disparityMap(v - 1, u, 1);
+% 			d2 = disparityMap(v, u - 1, 1);
 			
 			min_v = max([v - dm_maxDisparity, dm_patchSize + 1]);
 			max_v = min([v + dm_maxDisparity, r - dm_patchSize - 1]);
@@ -76,7 +80,7 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
             % if we use the sum of the SSD response, decomment this
             % otherwise leave it as it is.
 			%lambda = dm_regularization / (max_v - min_v + 1);
-            lambda = dm_regularization;
+%             lambda = dm_regularization;
 			err = 1e30;
 			depth = 0;
 			
@@ -84,12 +88,17 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 				%SSD
 				delta = (patchL{1} - patchesR{k}).^2;
 				
-                delta_dx_sq = (patchL_dx{1} - patchesR_dx{k}).^2;
+				% gradient matching
+                %delta_dx_sq = (patchL_dx{1} - patchesR_dx{k}).^2;
                 
-				tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
+				%tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
+				% simplified formula
+				tmp_err = sum(delta(:));
 				d3 = k - v;
-					
-				tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
+				
+				% removed just like regularization
+				%tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
+				
 				
 				if tmp_err < err
 					err = tmp_err;
@@ -97,9 +106,12 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 				end
 			end
 			
-			disparityMap(v, u, 1) = depth;
-			disparityMap(v, u, 2) = err;
+			depthMap(v, u) = depth;
+			errorMap(v, u) = err;
 		end
 	end
+	
+	disparityMap(:,:, 1) = depthMap;
+	disparityMap(:,:, 2) = errorMap;
 end
 

@@ -1,4 +1,4 @@
-function [rImg1, rImg2] = rectifyImages(img1, img2, loc1, loc2, ...
+function [rImg1, rImg2, rotation] = rectifyImages(img1, img2, loc1, loc2, ...
 		orient1, orient2)
 	%RECTIFYIMAGES Rectify an image pair
 	%   This function rectifies a pairs of equirectangular images so that their
@@ -21,9 +21,12 @@ function [rImg1, rImg2] = rectifyImages(img1, img2, loc1, loc2, ...
 	% See "3-D Reconstruction from Full-view Fisheye Camera" by Chuiwen et al.
 	% for further information about image rectification
 	
+	% This rotation rotates the cameras on their z-axis so that the meridians
+	% are the epipolar lines
+	rot3 = eul2rotm([pi/2, 0, 0]);
+	
 	% Determining the rotation axis and angle for each camera to have the x-axis
 	% aligned.
-	rot3 = eul2rotm([pi/2, 0, 0]);
 	t = loc2 - loc1;
 	t = t/norm(t);
 	x1 = orient1 * [1, 0, 0]';
@@ -32,8 +35,8 @@ function [rImg1, rImg2] = rectifyImages(img1, img2, loc1, loc2, ...
 	alpha1 = acos(dot(x1, t));
 	rot11 = axisRot2mat(orient1' * n1', alpha1);
 	absrot11 = axisRot2mat(n1, alpha1);
-	% NB the rotation order is swapped to avoid gimbal lock
-	rImg1 = rotateLL(img1, rot11 * rot3);
+	rotation = rot11 * rot3;
+	rImg1 = rotateLL(img1, rotation);
 	
 	x2 = orient2 * [1, 0, 0]';
 	n2 = cross(x2, t);
