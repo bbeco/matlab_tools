@@ -7,17 +7,14 @@ addpath('utils');
 addpath('ground_truth');
 addpath('display_images');
 
-baseDir = fullfile('images/sfm_test/test6');
+baseDir = fullfile('images/densification_test/test3_simple_textured');
 %resultsDir = fullfile('../results/densification_test/densification5');
 load(fullfile(baseDir, 'groundTruth'));
 groundTruthPoses = translateLocation(groundTruthPoses);
 groundTruthPoses = alignOrientation(groundTruthPoses);
 
-color1 = imread(fullfile(baseDir, 'll1.png'));
-color2 = imread(fullfile(baseDir, 'll2.png'));
-
-color1 = imresize(color1, 0.25);
-color2 = imresize(color2, 0.25);
+color1 = imread(fullfile(baseDir, 'imgL.png'));
+color2 = imread(fullfile(baseDir, 'imgR.png'));
 
 [height, width, ~] = size(color1);
 
@@ -36,6 +33,12 @@ orient2 = groundTruthPoses.Orientation{2};
 [gray1, gray2] = rectifyImages(gray1, gray2, ...
 	loc1, loc2, orient1, orient2);
 
+color1 = imresize(color1, 0.5);
+color2 = imresize(color2, 0.5);
+
+gray1 = imresize(gray1, 0.5);
+gray2 = imresize(gray2, 0.5);
+
 figure
 imshow([color1; color2]);
 step = 30;
@@ -52,24 +55,29 @@ title('rectified images');
 % title('rectified images');
 
 % disparity parameters
-dm_patchSize = 15;
+dm_patchSize = 9;
 % disparityList = 1:5:width;
-dm_maxDisparity = 180;
+%dm_maxDisparity = 180;
 dm_metric = 'SSD';
-dm_regularization = 0.2;
-dm_alpha = 0.05;
+dm_regularization = 0;
+dm_alpha = 0;
+
+dm_maxDisparity = computeMaxDisparity(gray1, gray2);
 
 disparityRange = [-dm_maxDisparity, dm_maxDisparity];
 
 % ATTENZIONE per maxDisparity quando non e' settata (non sono sicuro
 % calcoli il valore corretto dalla GUI
-[dispLR, dispRL, maskLR, maskRL] = ...
-		computeDisparityEquirectangularCC(im2double(gray1), im2double(gray2), ...
-		dm_patchSize, dm_maxDisparity, ...
-		dm_metric, dm_regularization, dm_alpha);
-% [dispLR, ~] = computeDisparityEquirectangular(gray1, gray2, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha);
+% [dispLR, dispRL, maskLR, maskRL] = ...
+% 		computeDisparityEquirectangularCC(im2double(gray1), im2double(gray2), ...
+% 		dm_patchSize, dm_maxDisparity, ...
+% 		dm_metric, dm_regularization, dm_alpha);
+% figure
+% imshow(mat2gray(abs(dispLR(:,:,1))).*maskLR);
+
+[dispLR, ~] = computeDisparityEquirectangular(gray1, gray2, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha);
 figure
-imshow(mat2gray(abs(dispLR(:,:,1))).*maskLR);
+imshow(mat2gray(abs(dispLR(:,:,1))));
 % 
 % parfor i = 1:length(regularizationList)
 % 	dm_regularization = regularizationList(i);

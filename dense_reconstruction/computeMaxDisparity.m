@@ -9,9 +9,9 @@ features2 = extractFeatures(gray2, points2, 'Upright', true);
 
 indexPairs = matchFeatures(features1, features2);
 
-distances = abs(cat(1, points1(indexPairs(:, 1))) - ...
-	cat(1, points2(indexPairs(:, 2))));
+distances = abs(points1.Location(indexPairs(:, 1), :) - ...
+	points2.Location(indexPairs(:, 2), :));
 
-dm_maxDisparity = max(distances(:, 2));
+dm_maxDisparity = ceil(max(distances(:, 2)));
 end
 
