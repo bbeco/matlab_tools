@@ -54,10 +54,10 @@ seqFilterAngularThreshold = 8;
 seqFilterQuantile = 0.8;
 
 firstFrame = 1;
-lastFrame = 365;
+lastFrame = imgNumber;
 % **********************************
 
-[vSet, xyzPoints, ~, ...
+[vSet, worldPoints, ~, ...
 		~, ...
 		~, ~, frameUsed] = ...
 		sfmLL_function(baseDir, ...
@@ -68,7 +68,7 @@ lastFrame = 365;
 		performGlobalBundleAdjustment, performWindowedBundleAdjustment, ...
 		viewsWindowSize, firstFrame, lastFrame, ...
 		baAbsoluteTolerance, baRelativeTolerance, baMaxIterations, ...
-		seqFilterAngularThreshold, seqFilterQuantile)
+		seqFilterAngularThreshold, seqFilterQuantile);
 	
 poses = vSet.poses();
 
@@ -78,10 +78,7 @@ filename = fullfile(resultsDir, 'sparse.ply');
 if exist(filename, 'file') ~= 0
 	delete(filename);
 end
-writePointCloudPLY(xyzPoints, repmat(uint8([255, 0, 0]), size(xyzPoints, 1)), filename);
-
-%debug
-points = cell(numel(images) - 1, 2);
+writePointCloudPLY(worldPoints{1,1}, worldPoints{1, 2}, filename);
 
 % this contains N world points stored as an xyz vector and an RGB vector
 worldPoints = cell(1, 2);
@@ -166,9 +163,6 @@ for i = 1:(numel(images) - 1)
 		vec = orient1' * rot * vec;
 		xyzPoints(j, :) = vec' - loc1;
 	end
-	
-	points{i, 1} = xyzPoints;
-	points{i, 2} = colors;
 	
 	%add points to the existing set
 	worldPoints{1} = [worldPoints{1}; xyzPoints];

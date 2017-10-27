@@ -1,4 +1,4 @@
-function [vSet, xyzPoints, reprojectionErrors, ...
+function [vSet, worldPoints, reprojectionErrors, ...
 		pointsForEEstimationCounter, ...
 		pointsForPoseEstimationCounter, tracksSize, frameUsed] = ...
 		sfmLL_function(imageDir, ...
@@ -24,9 +24,10 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 	% Convert the images to grayscale.
 	imgNumber = lastFrame - firstFrame + 1;
 	images = cell(1, lastFrame);
+	coloredImg = cell(size(images));
 	parfor i = 1:lastFrame
-		I = readimage(imds, i);
-		images{i} = rgb2gray(I);
+		coloredImg{i} = readimage(imds, i);
+		images{i} = rgb2gray(coloredImg{i});
 	end
 
 	% title('Input Image Sequence');
@@ -312,6 +313,21 @@ function [vSet, xyzPoints, reprojectionErrors, ...
 			'RelativeTolerance', baRelativeTolerance);
 		reprojectionErrors(i + 1) = median(tmpReprojectionErrors);
 
+		%saving world points' position and color
+		colors = zeros(length(xyzPoints), 3, 'uint8');
+		indexes = find(frameUsed);
+		for i = 1:length(tracks)
+			imgNumber = indexes(tracks(i).ViewIds(1));
+			u = min(width, round(tracks(i).Points(1, 1)));
+			u = max(1, u);
+			
+			v = min(height, round(tracks(i).Points(1, 2)));
+			v = max(1, v);
+			colors(i, :) = coloredImg{imgNumber}(v, u, :);
+		end
+		worldPoints{1, 1} = xyzPoints;
+		worldPoints{1, 2} = colors;
+		
 		% Store the refined camera poses.
 		vSet = updateView(vSet, camPoses);
 	end
