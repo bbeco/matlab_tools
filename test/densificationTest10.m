@@ -1,4 +1,4 @@
-% This performs the default pipeline (except for the frame selector)
+% Reconstruction for synthetic square (test10)
 clear;
 addpath('geometry');
 addpath('image_transform');
@@ -26,7 +26,7 @@ computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 0.8;
 
 % filter those matches whose points have similar coordinates
-filterMatches = false;
+filterMatches = true;
 angularThreshold = 2; %degrees
 
 % minimun threshold for the third components of key points directions.
@@ -39,18 +39,24 @@ maxLatitudeAngle = 60; %degrees
 
 % Bundle Adjustment parameters
 performGlobalBundleAdjustment = true;
-bundleAdjustmentAbsoluteTolerance = 1e-05;
-bundleAdjustmentRelativeTolerance = 1e-09;
-bundleAdjustmentMaxIterations = 300;
+baAbsoluteTolerance = 1e-05;
+baRelativeTolerance = 1e-09;
+baMaxIterations = 300;
 
 % Windowed bundle adjustment parameters
 performWindowedBundleAdjustment = true;
 % see paramTable for this
-windowSize = 5;
+viewsWindowSize = 5;
+seqFilterAngularThreshold = 8;
+
 % Sequence filter parameters
 % ... see experiment params
 seqFilterQuantile = 0.8;
+
+firstFrame = 1;
+lastFrame = 365;
 % **********************************
+
 [vSet, xyzPoints, ~, ...
 		~, ...
 		~, ~, frameUsed] = ...
@@ -60,7 +66,7 @@ seqFilterQuantile = 0.8;
 		zMin, ...
 		prefilterLLKeyPoints, maxLatitudeAngle, ...
 		performGlobalBundleAdjustment, performWindowedBundleAdjustment, ...
-		viewsWindowSize, imgNumber, ...
+		viewsWindowSize, firstFrame, lastFrame, ...
 		baAbsoluteTolerance, baRelativeTolerance, baMaxIterations, ...
 		seqFilterAngularThreshold, seqFilterQuantile)
 	
