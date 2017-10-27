@@ -1,11 +1,11 @@
-function rImg = rotateLL(img, x, y, z)
+function rImg = rotateLL(img, rot)
 %	This function perform a rotation of the LL encoded image img accordingly to 
-%	the angles provided (in radians).
+%	the rotation matrix provided (in the premultiply form).
 %
 % 	The algorithm works as follow: for each point in the rotated image
 % 		1) projects it to on the unit sphere and compute the x, y, z coordinates
-% 		2) perform the rotations around the X, Y and Z-axes (in this order).
-% 			NB: it performs a rotation in the OPPOSITE direction because when 
+% 		2) perform the rotations according the rotation matrix rot
+% 			NB: it performs a rotation in the OPPOSITE direction because we 
 % 			are moving from the rotated image to the original one in order to 
 % 			sample pixel (see backward warping).
 % 		3) convert the point back in LL coordinates
@@ -13,9 +13,7 @@ function rImg = rotateLL(img, x, y, z)
 %	
 %	Input:
 %		-img: The original image in LL format
-%		-x: The value for the rotation around the x-axe
-%		-y: The value for the rotation around the y-axe
-%		-z: The value for the roation around the z-axe
+%		-rot: The rotation to apply to the camera.
 %
 %	Output:
 %		rImg: The rotated LL image
@@ -36,26 +34,21 @@ function rImg = rotateLL(img, x, y, z)
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
 
-    [height, width] = size(img);
-    rImg = zeros(height, width, 'uint8');
-	%inverting all the angles for backward warping
-	x = -x;
-	y = -y;
-	z = -z;
-
+    [height, width, c] = size(img);
+% 	if c > 1
+% 		error('img is expected to be a single channel gray scale image');
+% 	end
+	
+    rImg = zeros(height, width, c, 'like', img);
+	
     for i = 1:height
         for j = 1:width
 			%unmapping
-            rlat = pi/2 - i*pi/height;
-            rlong = j*2*pi/width - pi;
+			[rlat, rlong] = extractLLCoordinateFromImage(j, i, width, height);
 			
             p = LL2Cartesian(rlat,rlong);
 			
-            %rotation
-            Rx = [1 0 0; 0 cos(x) -sin(x); 0 sin(x) cos(x)];
-            Ry = [cos(y) 0 sin(y); 0 1 0; -sin(y) 0 cos(y)];
-            Rz = [cos(z) -sin(z) 0; sin(z) cos(z) 0; 0 0 1];
-            p = Rz*Ry*Rx*p;
+			p = rot * p;
 			
             [lat, long] = cartesian2LL(p);
 			
@@ -64,8 +57,8 @@ function rImg = rotateLL(img, x, y, z)
             v = (pi/2 - lat)/pi*height;
 			
 			%sampling
-			%TODO use interpolation when sampling (interp?)
-            rImg(i, j) = img(max(1, ceil(v)), max(1, ceil(u)));
+% 			TODO use interpolation when sampling (interp?)
+            rImg(i, j, :) = img(max(1, floor(v)), max(1, floor(u)), :);
         end
     end
 end

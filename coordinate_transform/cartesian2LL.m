@@ -1,6 +1,6 @@
 function [lat, long] = cartesian2LL(p)
 %   Convert the given point to LL coordinates. The coordinate system of the
-%   input is assumed to have x and y axes pointing right and up, and the -z
+%   input is assumed to have x and y axes pointing right and down, and the z
 %   axe that points forward.
 %   
 %   Input:
@@ -25,9 +25,6 @@ function [lat, long] = cartesian2LL(p)
 %	You should have received a copy of the GNU Lesser General Public License
 %	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-
-
-
-    long = arctan(-p(3), p(1));
-    lat = arctan(sqrt(p(1)^2 + p(3)^2), p(2));
+    long = atan2(p(1), p(3));
+    lat = atan2(-p(2), sqrt(p(1)^2 + p(3)^2));
 end
