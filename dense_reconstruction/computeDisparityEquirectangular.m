@@ -61,13 +61,13 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 		%once we know the epipolar line, we can extract all the patches
 		%from the other images
 		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
-		patchesR = createPatch(imgR, latR, longR, c, r, ...
+		[patchesR, ~, patchesR_dx] = createPatch(imgR, latR, longR, c, r, ...
 			dm_patchSize);
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		for v = (dm_patchSize + 1):(r - dm_patchSize - 1)
 % 			disp(['Processing row: ', num2str(v), '/', num2str(r)]);
 			[latL, longL] = extractLLCoordinateFromImage(u, v, c, r);
-			patchL = createPatch(imgL, latL, longL, c, r, ...
+			[patchL, ~, patchL_dx] = createPatch(imgL, latL, longL, c, r, ...
 				dm_patchSize);
 
 			%removed to use parfor
@@ -89,11 +89,11 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 				delta = (patchL{1} - patchesR{k}).^2;
 				
 				% gradient matching
-                %delta_dx_sq = (patchL_dx{1} - patchesR_dx{k}).^2;
+                delta_dx_sq = (patchL_dx{1} - patchesR_dx{k}).^2;
                 
-				%tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
+				tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
 				% simplified formula
-				tmp_err = sum(delta(:));
+%  				tmp_err = sum(delta(:));
 				d3 = k - v;
 				
 				% removed just like regularization

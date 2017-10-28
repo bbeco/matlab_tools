@@ -1,4 +1,4 @@
-% new test for 
+% test for disparity parameters
 clear;
 addpath('geometry');
 addpath('image_transform');
@@ -9,7 +9,6 @@ addpath('ground_truth');
 addpath('display_images');
 
 baseDir = fullfile('images/sfm_test/test6');
-resultsDir = fullfile('../results/densification_test/densification11');
 load(fullfile(baseDir, 'groundTruth'));
 poses = translateLocation(groundTruthPoses);
 poses = alignOrientation(poses);
@@ -67,7 +66,19 @@ for i = 1:(numel(images) - 1)
 	%dm_maxDisparity = 180;
 	dm_metric = 'SSD';
 	dm_regularization = 0;
-	dm_alpha = 0;
+	dm_alpha = 0.5;
+	dm_subtractMeanValue = false;
+	
+	%Result dir
+	foldername = ['ps', num2str(dm_patchSize), ...
+		'_metric', dm_metric, ...
+		'_regularization', num2str(dm_regularization), ...
+		'_alpha', num2str(dm_alpha), ...
+		'_subtractMean', num2str(dm_subtractMeanValue)];
+	resultsDir = fullfile('../results/densification_test/densification11', foldername);
+	if exist(resultsDir, 'dir') == 0
+		mkdir(resultsDir);
+	end
 
 	dm_maxDisparity = computeMaxDisparity(gray1, gray2);
 
@@ -75,13 +86,25 @@ for i = 1:(numel(images) - 1)
 
 	% ATTENZIONE per maxDisparity quando non e' settata (non sono sicuro
 	% calcoli il valore corretto dalla GUI
-	[dispLR, dispRL, maskLR, maskRL] = ...
-			computeDisparityEquirectangularCC(im2double(gray1), im2double(gray2), ...
-			dm_patchSize, dm_maxDisparity, ...
-			dm_metric, dm_regularization, dm_alpha);
+	if strcmp(dm_metric, 'NCC')
+		[dispLR, dispRL, maskLR, maskRL] = ...
+				computeDisparityNCCEquirectangularCC(im2double(gray1), im2double(gray2), ...
+				dm_patchSize, dm_maxDisparity, ...
+				dm_metric, dm_regularization, dm_alpha);
+	else
+		[dispLR, dispRL, maskLR, maskRL] = ...
+				computeDisparityEquirectangularCC(im2double(gray1), im2double(gray2), ...
+				dm_patchSize, dm_maxDisparity, ...
+				dm_metric, dm_regularization, dm_alpha);
+	end
 	figure
 	imshow(mat2gray(abs(dispLR(:,:,1))).*maskLR);
 	filename = fullfile(resultsDir,['disparityMap', num2str(i), '.fig']);
+	if exist(filename, 'file') ~= 0
+		delete(filename);
+	end
+	saveas(gcf, filename);
+	filename = fullfile(resultsDir,['disparityMap', num2str(i), '.pdf']);
 	if exist(filename, 'file') ~= 0
 		delete(filename);
 	end

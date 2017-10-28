@@ -99,8 +99,8 @@ function [patches, patches_sq, patches_dx] = createPatch(llImg, plat, plong, llw
         kernelX = [-1, 0, 1; -2, 0, 2; -1,  0, 1];
         patches_dx = cell(1, length(plat));
         for k = 1:length(plat)
-            patches_dx{k}(:,:,1) = imfilter(patches{k}, kernelX,  'same');
-			patches_dx{k}(:,:,2) = imfilter(patches{k}, kernelX',  'same');
+            patches_dx{k}(:,:,1) = imfilter(patches{k}, kernelX, 'same');
+			patches_dx{k}(:,:,2) = imfilter(patches{k}, kernelX', 'same');
 		end
 	end
 end
