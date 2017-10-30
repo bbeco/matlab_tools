@@ -1,8 +1,8 @@
-function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue)
+function [disparityMap, dm_maxDisparity, patchesL, patchesL_dx, patchesR, patchesR_dx] = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue, patchesL, patchesL_dx, patchesR, patchesR_dx)
 %COMPUTEDISPARITYEQUIRECTANGULAR Compute disparity map for an LL image pair
 %   This function is inspired by computeDisparitySlow of HDR Toolbox.
 	if(~exist('dm_patchSize', 'var'))
-		dm_patchSize = 7;
+		dm_patchSize = 9;
 	end
 
 	if(~exist('dm_maxDisparity', 'var'))
@@ -55,19 +55,28 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 	%temporary variables to use parfor
 	depthMap = zeros(r, c);
 	errorMap = zeros(r, c);
+	
+	% if the patches were not previously computed, do it now
+	if ~exist('patchesL', 'var')
+		patchesL = cell(r, c);
+		patchesL_dx = cell(r, c);
+		patchesR = cell(r, c);
+		patchesR_dx = cell(r, c);
+		parfor j = 1:c
+			disp(['Creating patch: ', num2str(j), '/', num2str(c)]);
+			for i = 1:r
+				[lat, long] = extractLLCoordinateFromImage(j, i, c, r);
+				[patchesL{i, j}, ~, patchesL_dx{i, j}] = createPatch(imgL, ...
+					lat, long, c, r, dm_patchSize, dm_subtractMeanValue);
+				[patchesR{i, j}, ~, patchesR_dx{i, j}] = createPatch(imgR, ...
+					lat, long, c, r, dm_patchSize, dm_subtractMeanValue);
+			end
+		end
+	end
+	
 	parfor u = min_u:max_u
-		%once we know the epipolar line, we can extract all the patches
-		%from the other images
-		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
-		[patchesR, ~, patchesR_dx] = createPatch(imgR, latR, longR, c, r, ...
-			dm_patchSize, dm_subtractMeanValue);
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		for v = (dm_patchSize + 1):(r - dm_patchSize - 1)
-% 			disp(['Processing row: ', num2str(v), '/', num2str(r)]);
-			[latL, longL] = extractLLCoordinateFromImage(u, v, c, r);
-			[patchL, ~, patchL_dx] = createPatch(imgL, latL, longL, c, r, ...
-				dm_patchSize, dm_subtractMeanValue);
-
 			%removed to use parfor
 % 			d1 = disparityMap(v - 1, u, 1);
 % 			d2 = disparityMap(v, u - 1, 1);
@@ -84,10 +93,10 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 			
 			for k = min_v:max_v
 				%SSD
-				delta = (patchL{1} - patchesR{k}).^2;
+				delta = (patchesL{v, u} - patchesR{k, u}).^2;
 				
 				% gradient matching
-                delta_dx_sq = (patchL_dx{1} - patchesR_dx{k}).^2;
+                delta_dx_sq = (patchesL_dx{v, u} - patchesR_dx{k, u}).^2;
                 
 				tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
 				% simplified formula

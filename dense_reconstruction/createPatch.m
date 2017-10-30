@@ -1,4 +1,4 @@
-function [patches, patches_sq, patches_dx] = createPatch(llImg, plat, plong, llwidth, llheight, patchResolution, subtractMeanValue)
+function [patch, patch_sq, patch_dx] = createPatch(llImg, plat, plong, llwidth, llheight, patchResolution, subtractMeanValue)
 	%CREATEPATCH Compute the image patch for window matching algorithm
 	%   This function projects an equirectangular image's area into a window
 	%   (patch). The patch represents an input suitable for block matching
@@ -65,55 +65,43 @@ function [patches, patches_sq, patches_dx] = createPatch(llImg, plat, plong, llw
 	k_u = patchSize/uMax;
 	k_v = patchSize/vMax;
 	
-	patches = cell(1, length(plat));
-	for k = 1:length(plat)
-% 		disp(['Creating patch: ', num2str(k), '/', num2str(length(plat))]);
-		patches{k} = zeros(vMax, uMax, 'double');
-		
-		% find the u and v directions that lie on the patch's plane
-		r = LL2Cartesian(plat(k), plong);
-		vdir = [0 1 0]';
-		udir = [1 0 0]';
-		
-		% computing the rotation for the u and v directions
-		a = LL2Cartesian(0, plong + pi/2);
-		rot = axisRot2mat(a, plat(k));
-		
-		% we have to rotate udir about the y axis also by plong(k)
-		udir = rot * eul2rotm([0 plong 0]) * udir;
-		vdir = rot * vdir;
-		
-        llImg = im2double(llImg);
-		for v = 1:vMax
-			for u = 1:uMax
-				p = r + k_u*(u - u0)*udir + k_v*(v - v0)*vdir;
-				[lat, long] = cartesian2LL(p);
-				[llu, llv] = ll2equirectangular(lat, long, llwidth, llheight);
-				patches{k}(v, u) = llImg(llv, llu);
-			end
+	patch = zeros(vMax, uMax, 'double');
+
+	% find the u and v directions that lie on the patch's plane
+	r = LL2Cartesian(plat, plong);
+	vdir = [0 1 0]';
+	udir = [1 0 0]';
+
+	% computing the rotation for the u and v directions
+	a = LL2Cartesian(0, plong + pi/2);
+	rot = axisRot2mat(a, plat);
+
+	% we have to rotate udir about the y axis also by plong(k)
+	udir = rot * eul2rotm([0 plong 0]) * udir;
+	vdir = rot * vdir;
+
+	llImg = im2double(llImg);
+	for v = 1:vMax
+		for u = 1:uMax
+			p = r + k_u*(u - u0)*udir + k_v*(v - v0)*vdir;
+			[lat, long] = cartesian2LL(p);
+			[llu, llv] = ll2equirectangular(lat, long, llwidth, llheight);
+			patch(v, u) = llImg(llv, llu);
 		end
 	end
 	
 	if subtractMeanValue
-		for k = 1:length(plat)
-			patches{k} = patches{k} - mean(patches{k}(:));
-		end
+		patch = patch - mean(patch(:));
 	end
 	
 	if nargout > 1
-		patches_sq = cell(1, length(plat));
-		for k = 1:length(plat)
-			patches_sq{k} = patches{k}.^2;
-		end
+		patch_sq = patch.^2;
 	end
     
 	if nargout > 2
         kernelX = [-1, 0, 1; -2, 0, 2; -1,  0, 1];
-        patches_dx = cell(1, length(plat));
-		for k = 1:length(plat)
-            patches_dx{k}(:,:,1) = imfilter(patches{k}, kernelX, 'same');
-			patches_dx{k}(:,:,2) = imfilter(patches{k}, kernelX', 'same');
-		end
+		patch_dx(:,:,1) = imfilter(patch, kernelX, 'same');
+		patch_dx(:,:,2) = imfilter(patch, kernelX', 'same');
 	end
 end
 

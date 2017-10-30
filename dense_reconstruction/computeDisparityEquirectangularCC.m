@@ -61,8 +61,10 @@ if ~exist('dm_subtractMeanValue', 'var')
 	dm_subtractMeanValue = false;
 end
 
-[dm_LR, dm_maxDisparity] = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue);
-[dm_RL, ~] = computeDisparityEquirectangular(imgR, imgL, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue);
+[dm_LR, dm_maxDisparity, patchesL, patchesL_dx, patchesR, patchesR_dx] = ...
+	computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue);
+[dm_RL, ~, ~, ~, ~, ~] = ...
+	computeDisparityEquirectangular(imgR, imgL, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue, patchesR, patchesR_dx, patchesL, patchesL_dx);
 
 %consistency check
 [r, c, ~] = size(imgL);

@@ -15,7 +15,9 @@ poses = alignOrientation(poses);
 
 images{1} = imread(fullfile(baseDir, 'll1.png'));
 images{2} = imread(fullfile(baseDir, 'll2.png'));
-% images{3} = imread(fullfile(baseDir, 'll3.png'));
+images{3} = imread(fullfile(baseDir, 'll3.png'));
+
+dispList = cell(numel(images) - 1, 2);
 
 % this contains N world points stored as an xyz vector and an RGB vector
 worldPoints = cell(1, 2);
@@ -29,6 +31,7 @@ for i = 1:(numel(images) - 1)
 
 	% This function returns the rotation that has been applied to the first
 	% camera (in the pre-multiply form)
+	disp(['Rectifying pair: ', num2str(i)]);
 	[color1, color2, rot] = rectifyImages(images{i}, images{i + 1}, ...
 		loc1, loc2, orient1, orient2);
 
@@ -88,6 +91,10 @@ for i = 1:(numel(images) - 1)
 				dm_patchSize, dm_maxDisparity, ...
 				dm_metric, dm_regularization, dm_alpha, false);
 	end
+	
+	dispList{i, 1} = dispLR;
+	dispList{i, 2} = maskLR;
+	
 	figure
 	imshow(mat2gray(abs(dispLR(:,:,1))).*maskLR);
 	filename = fullfile(resultsDir,['disparityMap', num2str(i), '.fig']);
@@ -118,7 +125,7 @@ for i = 1:(numel(images) - 1)
 	for j = 1:size(xyzPoints, 1)
 		vec = xyzPoints(j, :)';
 		vec = orient1' * rot * vec;
-		xyzPoints(j, :) = vec' - loc1;
+		xyzPoints(j, :) = vec' + loc1;
 	end
 	
 	%add points to the existing set
