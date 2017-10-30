@@ -15,7 +15,7 @@ poses = alignOrientation(poses);
 
 images{1} = imread(fullfile(baseDir, 'll1.png'));
 images{2} = imread(fullfile(baseDir, 'll2.png'));
-images{3} = imread(fullfile(baseDir, 'll3.png'));
+% images{3} = imread(fullfile(baseDir, 'll3.png'));
 
 dispList = cell(numel(images) - 1, 2);
 
@@ -62,6 +62,7 @@ for i = 1:(numel(images) - 1)
 	dm_regularization = 0;
 	dm_alpha = 0;
 	dm_subtractMeanValue = false;
+	dm_horDisparity = 0;
 	
 	%Result dir
 	foldername = ['ps', num2str(dm_patchSize), ...
@@ -74,7 +75,7 @@ for i = 1:(numel(images) - 1)
 		mkdir(resultsDir);
 	end
 
-	dm_maxDisparity = computeMaxDisparity(gray1, gray2);
+	[dm_maxDisparity, ~] = computeMaxDisparity(gray1, gray2);
 
 	disparityRange = [-dm_maxDisparity, dm_maxDisparity];
 
@@ -88,7 +89,7 @@ for i = 1:(numel(images) - 1)
 	else
 		[dispLR, dispRL, maskLR, maskRL] = ...
 				computeDisparityEquirectangularCC(im2double(gray1), im2double(gray2), ...
-				dm_patchSize, dm_maxDisparity, ...
+				dm_patchSize, dm_maxDisparity, dm_horDisparity, ...
 				dm_metric, dm_regularization, dm_alpha, false);
 	end
 	

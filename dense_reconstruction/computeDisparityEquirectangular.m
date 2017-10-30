@@ -1,4 +1,4 @@
-function [disparityMap, dm_maxDisparity, patchesL, patchesL_dx, patchesR, patchesR_dx] = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue, patchesL, patchesL_dx, patchesR, patchesR_dx)
+function [disparityMap, dm_maxDisparity, patchesL, patchesL_dx, patchesR, patchesR_dx] = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_horDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue, patchesL, patchesL_dx, patchesR, patchesR_dx)
 %COMPUTEDISPARITYEQUIRECTANGULAR Compute disparity map for an LL image pair
 %   This function is inspired by computeDisparitySlow of HDR Toolbox.
 	if(~exist('dm_patchSize', 'var'))
@@ -7,6 +7,10 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_dx, patchesR, patche
 
 	if(~exist('dm_maxDisparity', 'var'))
 		dm_maxDisparity = -1;
+	end
+	
+	if ~exist('dm_horDisparity', 'var')
+		dm_horDisparity = 0;
 	end
 
 	if(~exist('dm_regularization', 'var'))
@@ -74,7 +78,7 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_dx, patchesR, patche
 		end
 	end
 	
-	parfor u = min_u:max_u
+	for u = min_u:max_u
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		for v = (dm_patchSize + 1):(r - dm_patchSize - 1)
 			%removed to use parfor
@@ -91,25 +95,30 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_dx, patchesR, patche
 			err = 1e30;
 			depth = 0;
 			
+			min_l = max([u - dm_horDisparity, 1]);
+			max_l = min([u + dm_horDisparity, c]);
+			
 			for k = min_v:max_v
-				%SSD
-				delta = (patchesL{v, u} - patchesR{k, u}).^2;
-				
-				% gradient matching
-                delta_dx_sq = (patchesL_dx{v, u} - patchesR_dx{k, u}).^2;
-                
-				tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
-				% simplified formula
-%  				tmp_err = sum(delta(:));
-				d3 = k - v;
-				
-				% removed just like regularization
-				%tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
-				
-				
-				if tmp_err < err
-					err = tmp_err;
-					depth = d3;
+				for l = min_l:max_l
+					%SSD
+					delta = (patchesL{v, l} - patchesR{k, l}).^2;
+
+					% gradient matching
+					delta_dx_sq = (patchesL_dx{v, l} - patchesR_dx{k, l}).^2;
+
+					tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
+					% simplified formula
+	%  				tmp_err = sum(delta(:));
+					d3 = k - v;
+
+					% removed just like regularization
+					%tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
+
+
+					if tmp_err < err
+						err = tmp_err;
+						depth = d3;
+					end
 				end
 			end
 			

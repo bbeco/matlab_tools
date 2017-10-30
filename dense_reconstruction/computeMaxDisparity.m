@@ -1,4 +1,4 @@
-function dm_maxDisparity = computeMaxDisparity(gray1,gray2)
+function [dm_maxDisparity, dm_horDisparity] = computeMaxDisparity(gray1,gray2)
 %COMPUTEMAXDISPARITY detects and matches features in the given images and
 	%returns the maximum disparity value.
 points1 = detectSURFFeatures(gray1);
@@ -13,5 +13,6 @@ distances = abs(points1.Location(indexPairs(:, 1), :) - ...
 	points2.Location(indexPairs(:, 2), :));
 
 dm_maxDisparity = ceil(max(distances(:, 2)));
+dm_horDisparity = ceil(max(distances(:, 1)));
 end
 
