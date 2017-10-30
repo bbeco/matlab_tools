@@ -78,7 +78,7 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_dx, patchesR, patche
 		end
 	end
 	
-	for u = min_u:max_u
+	parfor u = min_u:max_u
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		for v = (dm_patchSize + 1):(r - dm_patchSize - 1)
 			%removed to use parfor
