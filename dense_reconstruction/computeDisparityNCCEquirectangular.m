@@ -1,8 +1,8 @@
-function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue)
+function [disparityMap, dm_maxDisparity] = computeDisparityNCCEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue)
 %COMPUTEDISPARITYEQUIRECTANGULAR Compute disparity map for an LL image pair
 %   This function is inspired by computeDisparitySlow of HDR Toolbox.
 	if(~exist('dm_patchSize', 'var'))
-		dm_patchSize = 7;
+		dm_patchSize = 9;
 	end
 
 	if(~exist('dm_maxDisparity', 'var'))
@@ -35,37 +35,34 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
 	%    dm_maxDisparity = dm_patchSize * 4;    
 	end
 	
-	if ~exist('dm_subtractMeanValue', 'var')
-		dm_subtractMeanValue = false;
-	end
-	
 	[r, c, col] = size(imgL);
 	
+	% Debugging purposes
 	min_u = dm_patchSize + 1;
 	max_u = c - dm_patchSize - 1;
 	
 	if col > 1
 		imgL = rbg2gray(imgL);
 		imgR = rgb2gray(imgR);
-    end
+	end
 	
     dm_alpha_inv = (1.0 - dm_alpha);
     
 	disparityMap = zeros(r, c, 2);
 	%temporary variables to use parfor
 	depthMap = zeros(r, c);
-	errorMap = zeros(r, c);
+	corrMap = zeros(r, c);
 	parfor u = min_u:max_u
 		%once we know the epipolar line, we can extract all the patches
 		%from the other images
 		[latR, longR] = extractLLCoordinateFromImage(u, 1:r, c, r);
-		[patchesR, ~, patchesR_dx] = createPatch(imgR, latR, longR, c, r, ...
+		[patchesR, patchesR_sq, ~] = createPatch(imgR, latR, longR, c, r, ...
 			dm_patchSize, dm_subtractMeanValue);
 		disp(['Processing column: ', num2str(u), '/', num2str(c)]);
 		for v = (dm_patchSize + 1):(r - dm_patchSize - 1)
 % 			disp(['Processing row: ', num2str(v), '/', num2str(r)]);
 			[latL, longL] = extractLLCoordinateFromImage(u, v, c, r);
-			[patchL, ~, patchL_dx] = createPatch(imgL, latL, longL, c, r, ...
+			[patchL, patchL_sq, ~] = createPatch(imgL, latL, longL, c, r, ...
 				dm_patchSize, dm_subtractMeanValue);
 
 			%removed to use parfor
@@ -79,37 +76,37 @@ function [disparityMap, dm_maxDisparity] = computeDisparityEquirectangular(imgL,
             % otherwise leave it as it is.
 			%lambda = dm_regularization / (max_v - min_v + 1);
 %             lambda = dm_regularization;
-			err = 1e30;
+			corr = 0;
 			depth = 0;
 			
 			for k = min_v:max_v
-				%SSD
-				delta = (patchL{1} - patchesR{k}).^2;
+				%NCC
+				delta = (patchL{1}.*patchesR{k})/sqrt(sum(patchL_sq{1}(:))*sum(patchesR_sq{k}(:)));
 				
 				% gradient matching
-                delta_dx_sq = (patchL_dx{1} - patchesR_dx{k}).^2;
+                %delta_dx_sq = (patchL_dx{1} - patchesR_dx{k}).^2;
                 
-				tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
+% 				tmp_err = dm_alpha_inv * sum(delta(:)) + dm_alpha * sum(delta_dx_sq(:));
 				% simplified formula
-%  				tmp_err = sum(delta(:));
+				tmp_corr = sum(delta(:));
 				d3 = k - v;
 				
 				% removed just like regularization
 				%tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
 				
 				
-				if tmp_err < err
-					err = tmp_err;
+				if tmp_corr > corr
+					corr = tmp_corr;
 					depth = d3;
 				end
 			end
 			
 			depthMap(v, u) = depth;
-			errorMap(v, u) = err;
+			corrMap(v, u) = corr;
 		end
 	end
 	
 	disparityMap(:,:, 1) = depthMap;
-	disparityMap(:,:, 2) = errorMap;
+	disparityMap(:,:, 2) = corrMap;
 end
 

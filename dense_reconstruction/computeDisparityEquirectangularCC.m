@@ -1,4 +1,4 @@
-function [dm_LR, dm_RL, dm_mask_LR, dm_mask_RL] = computeDisparityEquirectangularCC(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_metric, dm_regularization, dm_alpha)
+function [dm_LR, dm_RL, dm_mask_LR, dm_mask_RL] = computeDisparityEquirectangularCC(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_metric, dm_regularization, dm_alpha, dm_subtractMeanValue)
 %
 %       [dm_LR, dm_RL, dm_mask_LR, dm_mask_RL] = computeDisparitySlowCC(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_metric, dm_regularization, dm_alpha)
 %
@@ -38,7 +38,7 @@ function [dm_LR, dm_RL, dm_mask_LR, dm_mask_RL] = computeDisparityEquirectangula
 %
 
 if(~exist('dm_patchSize', 'var'))
-    dm_patchSize = 7;
+    dm_patchSize = 9;
 end
 
 if(~exist('dm_maxDisparity', 'var'))
@@ -57,8 +57,12 @@ if(~exist('dm_regularization', 'var'))
     dm_regularization = 0.2;
 end
 
-[dm_LR, dm_maxDisparity] = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha);
-[dm_RL, ~] = computeDisparityEquirectangular(imgR, imgL, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha);
+if ~exist('dm_subtractMeanValue', 'var')
+	dm_subtractMeanValue = false;
+end
+
+[dm_LR, dm_maxDisparity] = computeDisparityEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue);
+[dm_RL, ~] = computeDisparityEquirectangular(imgR, imgL, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue);
 
 %consistency check
 [r, c, ~] = size(imgL);

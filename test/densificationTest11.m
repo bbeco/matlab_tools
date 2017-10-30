@@ -13,13 +13,9 @@ load(fullfile(baseDir, 'groundTruth'));
 poses = translateLocation(groundTruthPoses);
 poses = alignOrientation(poses);
 
-images = cell(1, 3);
 images{1} = imread(fullfile(baseDir, 'll1.png'));
 images{2} = imread(fullfile(baseDir, 'll2.png'));
-images{3} = imread(fullfile(baseDir, 'll3.png'));
-
-%debug
-points = cell(numel(images) - 1, 2);
+% images{3} = imread(fullfile(baseDir, 'll3.png'));
 
 % this contains N world points stored as an xyz vector and an RGB vector
 worldPoints = cell(1, 2);
@@ -47,26 +43,21 @@ for i = 1:(numel(images) - 1)
 
 	figure
 	imshow([color1; color2]);
+	hold on
 	step = 30;
 	for col = 1:step:width
 		line([col, col], [1, 2*height], 'Color', 'r');
 	end
 	title('rectified images');
-	% 
-	% figure
-	% imshow([gray1; gray2]);
-	% for col = 1:step:width
-	% 	line([col, col], [1, 2*height], 'Color', 'r');
-	% end
-	% title('rectified images');
+	hold off
 
 	% disparity parameters
-	dm_patchSize = 9;
+	dm_patchSize = 11;
 	% disparityList = 1:5:width;
 	%dm_maxDisparity = 180;
 	dm_metric = 'SSD';
 	dm_regularization = 0;
-	dm_alpha = 0.5;
+	dm_alpha = 0;
 	dm_subtractMeanValue = false;
 	
 	%Result dir
@@ -90,12 +81,12 @@ for i = 1:(numel(images) - 1)
 		[dispLR, dispRL, maskLR, maskRL] = ...
 				computeDisparityNCCEquirectangularCC(im2double(gray1), im2double(gray2), ...
 				dm_patchSize, dm_maxDisparity, ...
-				dm_metric, dm_regularization, dm_alpha);
+				dm_metric, dm_regularization, dm_alpha, dm_subtractMeanValue);
 	else
 		[dispLR, dispRL, maskLR, maskRL] = ...
 				computeDisparityEquirectangularCC(im2double(gray1), im2double(gray2), ...
 				dm_patchSize, dm_maxDisparity, ...
-				dm_metric, dm_regularization, dm_alpha);
+				dm_metric, dm_regularization, dm_alpha, false);
 	end
 	figure
 	imshow(mat2gray(abs(dispLR(:,:,1))).*maskLR);
@@ -113,8 +104,9 @@ for i = 1:(numel(images) - 1)
 	disparityMap = dispLR.*maskLR;
 	baseline = norm(loc2 - loc1);
 	% densification
+	minDisp = 3;
 	[xyzPoints, colors] = ...
-		triangulateImagePoints(color1, disparityMap, baseline);
+		triangulateImagePoints(color1, disparityMap, baseline, minDisp);
 	
 	filename = fullfile(resultsDir, ['pair', num2str(i), '.ply']);
 	if exist(filename, 'file') ~= 0
@@ -128,9 +120,6 @@ for i = 1:(numel(images) - 1)
 		vec = orient1' * rot * vec;
 		xyzPoints(j, :) = vec' - loc1;
 	end
-	
-	points{i, 1} = xyzPoints;
-	points{i, 2} = colors;
 	
 	%add points to the existing set
 	worldPoints{1} = [worldPoints{1}; xyzPoints];

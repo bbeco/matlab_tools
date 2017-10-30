@@ -1,4 +1,4 @@
-function [patches, patches_sq, patches_dx] = createPatch(llImg, plat, plong, llwidth, llheight, patchResolution)
+function [patches, patches_sq, patches_dx] = createPatch(llImg, plat, plong, llwidth, llheight, patchResolution, subtractMeanValue)
 	%CREATEPATCH Compute the image patch for window matching algorithm
 	%   This function projects an equirectangular image's area into a window
 	%   (patch). The patch represents an input suitable for block matching
@@ -12,7 +12,9 @@ function [patches, patches_sq, patches_dx] = createPatch(llImg, plat, plong, llw
 	%		-patchSize: the size to be used for the patch, in pixels. This is
 	%		used to compute the size of the image plane for the projection, the
 	%		size in sphere radious unit is computed according to this value and
-	%		the equirectangular resolution.
+	%		the equirectangular resolution;
+	%		-subtractMeanValue: subtract the neighbourhood mean intensity value
+	%			from the patch.
 	%
 	%	Output:
 	%		-patches: an 1-by-N cell array of patches, one for each LL
@@ -40,7 +42,11 @@ function [patches, patches_sq, patches_dx] = createPatch(llImg, plat, plong, llw
 			error(['Invalid patchResolution: ', num2str(patchResolution)]);
 		end
 	else
-		patchResolution = 7;
+		patchResolution = 9;
+	end
+	
+	if ~exist('subtractMeanValue', 'var')
+		subtractMeanValue = false;
 	end
 	
 	radPerPixel = max(2*pi/llwidth, pi/llheight);
@@ -88,17 +94,23 @@ function [patches, patches_sq, patches_dx] = createPatch(llImg, plat, plong, llw
 		end
 	end
 	
+	if subtractMeanValue
+		for k = 1:length(plat)
+			patches{k} = patches{k} - mean(patches{k}(:));
+		end
+	end
+	
 	if nargout > 1
 		patches_sq = cell(1, length(plat));
 		for k = 1:length(plat)
 			patches_sq{k} = patches{k}.^2;
 		end
-    end
+	end
     
-    if nargout > 2
+	if nargout > 2
         kernelX = [-1, 0, 1; -2, 0, 2; -1,  0, 1];
         patches_dx = cell(1, length(plat));
-        for k = 1:length(plat)
+		for k = 1:length(plat)
             patches_dx{k}(:,:,1) = imfilter(patches{k}, kernelX, 'same');
 			patches_dx{k}(:,:,2) = imfilter(patches{k}, kernelX', 'same');
 		end
