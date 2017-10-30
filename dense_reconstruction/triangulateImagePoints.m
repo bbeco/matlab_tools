@@ -1,12 +1,17 @@
-function [xyzPoints, colors] = triangulateImagePoints(color1, disparityMap, baseline)
-	%UNTITLED Summary of this function goes here
-	%   Detailed explanation goes here
+function [xyzPoints, colors] = triangulateImagePoints(color1, disparityMap, baseline, minDisp)
+	%TRIANGULATEIMAGEPOINTS 
 	
 	%Input data to the densifiction function:
 	% color1, color2, disparityMap, baseline.
+	% minDisp (optional) do not triangulate points whose disparity is below this
+	% value.
 	%
 	%Output by densifiction:
 	%xyzPoints with color
+	
+	if ~exist('minDisp', 'var')
+		minDisp = 0;
+	end
 
 	[height, width, ~] = size(color1);
 	
@@ -20,7 +25,7 @@ function [xyzPoints, colors] = triangulateImagePoints(color1, disparityMap, base
 	for u = 1:size(disparityMap, 2)
 		for v = 1:size(disparityMap, 1)
 			% We can not estimate distance without disparity
-			if disparityMap(v, u) == 0
+			if disparityMap(v, u) <= minDisp
 				continue;
 			end
 
@@ -34,8 +39,8 @@ function [xyzPoints, colors] = triangulateImagePoints(color1, disparityMap, base
 				continue;
 			end
 
-			alpha = pi/2 + latL;
-			beta = pi/2 + latR;
+			alpha = pi/2 - latL;
+			beta = pi/2 - latR;
 
 			depth = baseline*(sin(alpha)*sin(beta))/sin(beta - alpha);
 			r = depth/sin(alpha);
@@ -50,5 +55,8 @@ function [xyzPoints, colors] = triangulateImagePoints(color1, disparityMap, base
 			colors(xyzSetLength, :) = color1(v, u, :);
 		end
 	end
+	
+	xyzPoints = xyzPoints(1:xyzSetLength, :);
+	colors = colors(1:xyzSetLength, :);
 end
 
