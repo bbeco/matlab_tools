@@ -5,17 +5,17 @@ addpath(fullfile('filters'));
 addpath(fullfile('ground_truth'));
 addpath(fullfile('data_analysis'));
 % addpath(fullfile('plot'));
-dataFolder = fullfile('images/sfm_test/test27_fontana_empoli3/');
+dataFolder = fullfile('images/sfm_test/test23_piazzaLeoni_empoli1/');
 % dataFolder = fullfile('images/sfm_test/test8');
 imageDir = fullfile(dataFolder, '*.jpg');
 
-resultBaseFolder = fullfile('../results/realSeqTest/test27');
+resultBaseFolder = fullfile('../results/realSeqSfmTest/test23_piazzaLeoni_empoli1/');
 
 imds = imageDatastore(imageDir);
 %The following is the actual number of images processed
-firstFrame = 1;
+firstFrame = 400;
 % lastFrame = numel(imds.Files);
-lastFrame = 400;
+lastFrame = 600;
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
@@ -71,8 +71,8 @@ paramTable = table({'name'}, {'inData'}, 0, 0, {'outFile'}, false, false, 0, ...
 	'VariableNames', varNames ...
 );
 
-thresholdList = [5];
-windowSizeList = [5];
+thresholdList = [10];
+windowSizeList = [4];
 
 repmat(paramTable, length(thresholdList)*length(windowSizeList), 1);
 
@@ -150,7 +150,7 @@ for k = 1:height(paramTable)
 % 			xyzPoints = xyzPoints(goodIdx, :);
 
 			% Display the 3-D points.
-			pcshow(xyzPoints, 'VerticalAxis', 'y', 'VerticalAxisDir', 'down', ...
+			pcshow(xyzPoints{1, 1}, 'VerticalAxis', 'y', 'VerticalAxisDir', 'down', ...
 				'MarkerSize', 45);
 			grid on
 			hold off

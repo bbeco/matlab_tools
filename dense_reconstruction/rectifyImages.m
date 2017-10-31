@@ -1,4 +1,4 @@
-function [rImg1, rImg2, rotation] = rectifyImages(img1, img2, loc1, loc2, ...
+function [rImg1, rImg2, rotation1, rotation2] = rectifyImages(img1, img2, loc1, loc2, ...
 		orient1, orient2)
 	%RECTIFYIMAGES Rectify an image pair
 	%   This function rectifies a pairs of equirectangular images so that their
@@ -35,8 +35,8 @@ function [rImg1, rImg2, rotation] = rectifyImages(img1, img2, loc1, loc2, ...
 	alpha1 = acos(dot(x1, t));
 	rot11 = axisRot2mat(orient1' * n1', alpha1);
 	absrot11 = axisRot2mat(n1, alpha1);
-	rotation = rot11 * rot3;
-	rImg1 = rotateLL(img1, rotation);
+	rotation1 = rot11 * rot3;
+	rImg1 = rotateLL(img1, rotation1);
 	
 	x2 = orient2 * [1, 0, 0]';
 	n2 = cross(x2, t);
@@ -46,8 +46,8 @@ function [rImg1, rImg2, rotation] = rectifyImages(img1, img2, loc1, loc2, ...
 	absrot12 = axisRot2mat(n2, alpha2);
 	% rotate second camera such that its z-axis is parallel to the other one's
 	rot22 = ((absrot11 * orient1)' * (absrot12 * orient2))';
-	
-	rImg2 = rotateLL(img2, rot12 * rot22 * rot3);
+	rotation2 = rot12 * rot22 * rot3;
+	rImg2 = rotateLL(img2, rotation2);
 	
 end
 
