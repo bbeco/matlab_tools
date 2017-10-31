@@ -10,17 +10,19 @@ function [xyzPoints, colors] = myTriangulateMidPoints(color1, disparityMap, rot1
 	[height, width, ~] = size(disparityMap(:,:,1));
 	
 	% do not triangulate points whose latitude absolute value is above this value
-	lambdaMax = 80/180*pi;
+	lambdaMax = 60/180*pi;
 
 	xyzPoints = zeros(height*width, 3);
 	colors = zeros(height*width, 3, 'uint8');
 	xyzSetLength = 0;
 	
-	R = orient2*orient1';
-	t = (loc2 - loc1)*orient1';
+	relativeOrient = orient2*orient1';
+	relativeLoc = (loc2 - loc1)*orient1';
+	
+	[R, t] = cameraPoseToExtrinsics(relativeOrient, relativeLoc);
 	
 	camMatrix1 = cameraMatrix(cameraParameters, eye(3), [0 0 0]);
-	camMatrix2 = cameraMatrix(cameraParameters, R, -t);
+	camMatrix2 = cameraMatrix(cameraParameters, R, t);
 	
 	for v = 1:size(disparityMap, 1)
 		for u = 1:size(disparityMap, 2)
@@ -45,15 +47,19 @@ function [xyzPoints, colors] = myTriangulateMidPoints(color1, disparityMap, rot1
 			point1 = rot1*dir1;
 			point2 = rot2*dir2;
 			
-			if point1(3) < zMin || point2(3) < zMin
+			if abs(point1(3)) < zMin || abs(point2(3)) < zMin
 				continue;
 			end
 			
 			point1 = point1/point1(3);
 			point2 = point2/point2(3);
 			
+			point3D = triangulateMidPoint(point1(1:2)', point2(1:2)', camMatrix1, camMatrix2);
+			if any(isnan(point3D)) || any(isinf(point3D))
+				continue;
+			end
 			xyzSetLength = xyzSetLength + 1;
-			xyzPoints(xyzSetLength, :) = triangulateMidPoint(point1(1:2)', point2(1:2)', camMatrix1, camMatrix2);
+			xyzPoints(xyzSetLength, :) = point3D;
 			% The color comes from the rectified color image
 			colors(xyzSetLength, :) = color1(v, u, :);
 		end

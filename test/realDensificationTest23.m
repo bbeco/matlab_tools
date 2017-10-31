@@ -37,7 +37,7 @@ for i = 1:length(imagesNumber)
 end
 
 % lastFrame = size(images, 2);
-lastFrame = 2;
+lastFrame = 3;
 
 dispList = cell(lastFrame - 1, 2);
 
@@ -49,10 +49,10 @@ dm_metric = 'SSD';
 dm_regularization = 0;
 dm_alpha = 0.05;
 dm_subtractMeanValue = false;
-% 	dm_horDisparity = 0;
+dm_horDisparity = 0;
 % densification
 scale = 0.25;
-minDisp = 3;
+minDisp = 5;
 
 %Result dir
 foldername = ['ps', num2str(dm_patchSize), ...
@@ -74,7 +74,10 @@ if exist(filename, 'file') ~= 0
 end
 writePointCloudPLY(sparsePoints{1, 1}, sparsePoints{1, 2}, filename);
 
-old = load('/tmp/old.mat');
+% old = load('/tmp/old.mat');
+
+%debug
+points = cell(1, lastFrame - 1);
 
 % this contains N world points stored as an xyz vector and an RGB vector
 worldPoints = cell(1, 2);
@@ -89,38 +92,38 @@ for i = 1:(lastFrame - 1)
 	% This function returns the rotation that has been applied to the first
 	% camera (in the pre-multiply form)
 	disp(['Rectifying pair: ', num2str(i)]);
-% 	[color1, color2, rot1, rot2] = rectifyImages(images{i}, images{i + 1}, ...
-% 		loc1, loc2, orient1, orient2);
+	[color1, color2, rot1, rot2] = rectifyImages(images{i}, images{i + 1}, ...
+		loc1, loc2, orient1, orient2);
 	
 
 	% resizing for performances
-% 	color1 = imresize(color1, scale);
-% 	color2 = imresize(color2, scale);
+	color1 = imresize(color1, scale);
+	color2 = imresize(color2, scale);
 
-% 	gray1 = rgb2gray(color1);
-% 	gray2 = rgb2gray(color2);
+	gray1 = rgb2gray(color1);
+	gray2 = rgb2gray(color2);
 
-	color1 = old.color1;
-	color2 = old.color2;
-	rot1 = old.rot1;
-	rot2 = old.rot2;
-	
-	gray1 = old.gray1;
-	gray2 = old.gray2;
+% 	color1 = old.color1;
+% 	color2 = old.color2;
+% 	rot1 = old.rot1;
+% 	rot2 = old.rot2;
+% 	
+% 	gray1 = old.gray1;
+% 	gray2 = old.gray2;
 
 	[height, width, ~] = size(color1);
 
-% 	figure
-% 	imshow([color1; color2]);
-% 	hold on
-% 	step = 30;
-% 	for col = 1:step:width
-% 		line([col, col], [1, 2*height], 'Color', 'r');
-% 	end
-% 	title('rectified images');
-% 	hold off
+	figure
+	imshow([color1; color2]);
+	hold on
+	step = 30;
+	for col = 1:step:width
+		line([col, col], [1, 2*height], 'Color', 'r');
+	end
+	title('rectified images');
+	hold off
 
-	[dm_maxDisparity, dm_horDisparity] = computeMaxDisparity(gray1, gray2);
+	[dm_maxDisparity, ~] = computeMaxDisparity(gray1, gray2);
 
 	disparityRange = [-dm_maxDisparity, dm_maxDisparity];
 
@@ -132,32 +135,32 @@ for i = 1:(lastFrame - 1)
 				dm_patchSize, dm_maxDisparity, ...
 				dm_metric, dm_regularization, dm_alpha, dm_subtractMeanValue);
 	else
-% 		[dispLR, dispRL, maskLR, maskRL] = ...
-% 				computeDisparityEquirectangularCC(im2double(gray1), im2double(gray2), ...
-% 				dm_patchSize, dm_maxDisparity, dm_horDisparity, ...
-% 				dm_metric, dm_regularization, dm_alpha, false);
+		[dispLR, dispRL, maskLR, maskRL] = ...
+				computeDisparityEquirectangularCC(im2double(gray1), im2double(gray2), ...
+				dm_patchSize, dm_maxDisparity, dm_horDisparity, ...
+				dm_metric, dm_regularization, dm_alpha, false);
 
-		dispLR = old.dispLR;
-		dispRL = old.dispRL;
-		maskLR = old.maskLR;
-		maskRL = old.maskRL;
+% 		dispLR = old.dispLR;
+% 		dispRL = old.dispRL;
+% 		maskLR = old.maskLR;
+% 		maskRL = old.maskRL;
 	end
 	
 	dispList{i, 1} = dispLR;
 	dispList{i, 2} = maskLR;
 	
-% 	figure
-% 	imshow(mat2gray(abs(dispLR(:,:,1))).*maskLR);
-% 	filename = fullfile(resultsDir,['disparityMap', num2str(i), '.fig']);
-% 	if exist(filename, 'file') ~= 0
-% 		delete(filename);
-% 	end
-% 	saveas(gcf, filename);
-% 	filename = fullfile(resultsDir,['disparityMap', num2str(i), '.pdf']);
-% 	if exist(filename, 'file') ~= 0
-% 		delete(filename);
-% 	end
-% 	saveas(gcf, filename);
+	figure
+	imshow(mat2gray(abs(dispLR(:,:,1))).*maskLR);
+	filename = fullfile(resultsDir,['disparityMap', num2str(i), '.fig']);
+	if exist(filename, 'file') ~= 0
+		delete(filename);
+	end
+	saveas(gcf, filename);
+	filename = fullfile(resultsDir,['disparityMap', num2str(i), '.pdf']);
+	if exist(filename, 'file') ~= 0
+		delete(filename);
+	end
+	saveas(gcf, filename);
 	
 	disparityMap = dispLR.*maskLR;
 	baseline = norm(loc2 - loc1);
@@ -165,13 +168,16 @@ for i = 1:(lastFrame - 1)
 % 	[xyzPoints, colors] = ...
 % 		triangulateImagePoints(color1, disparityMap, baseline, minDisp);
 
-	color1 = old.color1;
-	disparityMap = old.disparityMap;
-	loc1 = old.loc1;
-	loc2 = old.loc2;
-	orient1 = old.orient1;
-	orient2 = old.orient2;
+% 	color1 = old.color1;
+% 	disparityMap = old.disparityMap;
+% 	loc1 = old.loc1;
+% 	loc2 = old.loc2;
+% 	orient1 = old.orient1;
+% 	orient2 = old.orient2;
 	[xyzPoints, colors] = myTriangulateMidPoints(color1, disparityMap(:,:,1), rot1, rot2, loc1, loc2, orient1, orient2);
+	
+	%debug
+	points{i} = xyzPoints;
 	
 	filename = fullfile(resultsDir, ['pair', num2str(i), '.ply']);
 	if exist(filename, 'file') ~= 0
@@ -180,12 +186,14 @@ for i = 1:(lastFrame - 1)
 	writePointCloudPLY(xyzPoints, colors, filename);
 	
 	%translating 3D points to the common coordinate system
-% 	for j = 1:size(xyzPoints, 1)
-% 		vec = xyzPoints(j, :)';
-% 		%vec = orient1' * rot * vec;
-% 		vec = orient1' * vec;
-% 		xyzPoints(j, :) = vec' + loc1;
-% 	end
+	for j = 1:size(xyzPoints, 1)
+		vec = xyzPoints(j, :)';
+		%senza triangulateMidPoint
+% 		vec = orient1' * rot1 * vec;
+		%con triangulateMidPoint
+		vec = orient1' * vec;
+		xyzPoints(j, :) = vec' + loc1;
+	end
 	
 	%add points to the existing set
 	worldPoints{1} = [worldPoints{1}; xyzPoints];
