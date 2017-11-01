@@ -11,7 +11,7 @@ addpath('filters');
 
 baseDir = fullfile('images/sfm_test/test23_piazzaLeoni_empoli1');
 sfmResults = load(fullfile('../results/realSeqSfmTest/test23_piazzaLeoni_empoli1/full_workspace.mat'));
-resultsDir = fullfile('../results/realDensificationTest/test23_piazzaLeoni_empoli1');
+resultsDir = fullfile('../results/realDensificationTest/test23_piazzaLeoni_empoli1/filtered');
 if exist(resultsDir, 'dir') == 0
 	mkdir(resultsDir);
 end
@@ -38,6 +38,7 @@ end
 
 lastFrame = size(images, 2);
 % lastFrame = 3;
+maxProcessedViews = 3;
 
 dispList = cell(lastFrame - 1, 2);
 
@@ -65,7 +66,7 @@ foldername = ['ps', num2str(dm_patchSize), ...
 	'_regularization', num2str(dm_regularization), ...
 	'_alpha', num2str(dm_alpha), ...
 	'_subtractMean', num2str(dm_subtractMeanValue), ...
-	'_minDisp', num2str(3), ...
+	'_minDisp', num2str(minDisp), ...
 	'_scale', num2str(scale), ...
 	'aThreshold', num2str(angularThreshold), ...
 	'quantile', num2str(quantile)];
@@ -94,6 +95,7 @@ prevLLPoints = detectSURFFeatures(prevGray);
 prevFeatures = extractFeatures(prevGray, prevLLPoints);
 
 currId = 2;
+processedImgCounter = 1;
 while currId <= (lastFrame - 1)
 	
 	[height, width, ~] = size(prevColor);
@@ -114,6 +116,8 @@ while currId <= (lastFrame - 1)
 		currId = currId + 1;
 		continue;
 	end
+	
+	processedImgCounter = processedImgCounter + 1;
 
 	currLoc = poses.Location{currId};
 	currOrient = poses.Orientation{currId};
@@ -211,6 +215,10 @@ while currId <= (lastFrame - 1)
 	prevLLPoints = currLLPoints;
 	prevFeatures = currFeatures;
 	currId = currId + 1;
+	
+	if processedImgCounter >= maxProcessedViews
+		break;
+	end
 end
 
 filename = fullfile(resultsDir, 'total_points.ply');
