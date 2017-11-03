@@ -9,13 +9,13 @@ if channels > 1
 	img = rgb2gray(img);
 end
 
-patchResolution = 15;
+patchResolution = 101;
 patch = createPatch(img, 0, 0, width, height, patchResolution);
 figure
 subplot(2, 1, 1);
 imshow(img);
 ax = subplot(2, 1, 2);
-imshow(uint8(255 * mat2gray(patch{1})));
+imshow(uint8(255 * mat2gray(patch)));
 
 while true
 	[x, y, button] = ginput(1);
@@ -25,5 +25,5 @@ while true
 	round([x, y]);
 	[lat, long] = extractLLCoordinateFromImage(x, y, width, height);
 	patch = createPatch(img, lat, long, width, height, patchResolution);
-	imshow(uint8(255 * mat2gray(patch{1})), 'Parent', ax);
+	imshow(uint8(255 * mat2gray(patch)), 'Parent', ax);
 end

@@ -49,6 +49,9 @@ function [patch, patch_sq, patch_dx] = createPatch(llImg, plat, plong, llwidth, 
 		subtractMeanValue = false;
 	end
 	
+	% interpolation method (see interp2 docs);
+	interpMethod = 'nearest';
+	
 	radPerPixel = max(2*pi/llwidth, pi/llheight);
 	% This is the physical patch size in the same unit of the 3D sphere radius.
 	patchSize = 2*tan((patchResolution * radPerPixel)/2);
@@ -79,13 +82,18 @@ function [patch, patch_sq, patch_dx] = createPatch(llImg, plat, plong, llwidth, 
 	% we have to rotate udir about the y axis also by plong(k)
 	udir = rot * eul2rotm([0 plong 0]) * udir;
 	vdir = rot * vdir;
-
+	
+	%data structures for bilinear interpolation
+% 	[X, Y] = meshgrid(1:llwidth, 1:llheight);
+% 	V = im2double(llImg);
+	
 	llImg = im2double(llImg);
 	for v = 1:vMax
 		for u = 1:uMax
 			p = r + k_u*(u - u0)*udir + k_v*(v - v0)*vdir;
 			[lat, long] = cartesian2LL(p);
 			[llu, llv] = ll2equirectangular(lat, long, llwidth, llheight);
+% 			patch(v, u) = interp2(X, Y, V, llu, llv, interpMethod);
 			patch(v, u) = llImg(llv, llu);
 		end
 	end

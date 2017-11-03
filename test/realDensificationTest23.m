@@ -37,7 +37,7 @@ for i = 1:length(imagesNumber)
 end
 
 % lastFrame = size(images, 2);
-lastFrame = 3;
+lastFrame = 2;
 
 dispList = cell(lastFrame - 1, 2);
 
