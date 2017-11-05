@@ -51,7 +51,7 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_dx, patchesR, patche
 	if col > 1
 		imgL = rbg2gray(imgL);
 		imgR = rgb2gray(imgR);
-    end
+	end
 	
     dm_alpha_inv = (1.0 - dm_alpha);
     

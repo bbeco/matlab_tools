@@ -26,7 +26,7 @@ poses = sfmResults.vSet.poses();
 poses = translateLocation(poses);
 poses = alignOrientation(poses);
 
-% retriving images
+% retrieving images
 imds = imageDatastore(baseDir);
 usedFrames = sfmResults.frameUsed{1, 1};
 imagesNumber = find(usedFrames);
@@ -42,10 +42,10 @@ lastFrame = 2;
 dispList = cell(lastFrame - 1, 2);
 
 % disparity parameters
-dm_patchSize = 7;
+dm_patchSize = 9;
 % disparityList = 1:5:width;
 %dm_maxDisparity = 180;
-dm_metric = 'SSD';
+dm_metric = 'NCC';
 dm_regularization = 0;
 dm_alpha = 0.05;
 dm_subtractMeanValue = false;
@@ -53,6 +53,7 @@ dm_horDisparity = 0;
 % densification
 scale = 0.25;
 minDisp = 5;
+maxDistance = -1;
 
 %Result dir
 foldername = ['ps', num2str(dm_patchSize), ...
@@ -61,7 +62,8 @@ foldername = ['ps', num2str(dm_patchSize), ...
 	'_alpha', num2str(dm_alpha), ...
 	'_subtractMean', num2str(dm_subtractMeanValue), ...
 	'_minDisp', num2str(minDisp), ...
-	'_scale', num2str(scale)];
+	'_scale', num2str(scale), ...
+	'_maxDistance', num2str(maxDistance)];
 resultsDir = fullfile(resultsDir, foldername);
 if exist(resultsDir, 'dir') == 0
 	mkdir(resultsDir);
@@ -174,7 +176,10 @@ for i = 1:(lastFrame - 1)
 % 	loc2 = old.loc2;
 % 	orient1 = old.orient1;
 % 	orient2 = old.orient2;
-	[xyzPoints, colors] = myTriangulateMidPoints(color1, disparityMap(:,:,1), rot1, rot2, loc1, loc2, orient1, orient2);
+	[xyzPoints, colors] = myTriangulateMidPoints(...
+		color1, disparityMap(:,:,1),...
+		rot1, rot2, loc1, loc2, orient1, orient2, ...
+		minDisp, maxDistance);
 	
 	%debug
 	points{i} = xyzPoints;

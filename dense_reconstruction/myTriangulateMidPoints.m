@@ -1,8 +1,12 @@
-function [xyzPoints, colors] = myTriangulateMidPoints(color1, disparityMap, rot1, rot2, loc1, loc2, orient1, orient2, minDisp)
+function [xyzPoints, colors] = myTriangulateMidPoints(color1, disparityMap, rot1, rot2, loc1, loc2, orient1, orient2, minDisp, maxDistance)
 %MYTRIANGULATEMIDPOINTS Summary of this function goes here
 %   Detailed explanation goes here
 	if ~exist('minDisp', 'var')
-		minDisp = 0;
+		minDisp = 1;
+	end
+	
+	if ~exist('maxDistance', 'var')
+		maxDistance = -1;
 	end
 
 	zMin = 0.01;
@@ -23,6 +27,8 @@ function [xyzPoints, colors] = myTriangulateMidPoints(color1, disparityMap, rot1
 	
 	camMatrix1 = cameraMatrix(cameraParameters, eye(3), [0 0 0]);
 	camMatrix2 = cameraMatrix(cameraParameters, R, t);
+	
+	maxDistance = norm(relativeLoc) * maxDistance;
 	
 	for v = 1:size(disparityMap, 1)
 		for u = 1:size(disparityMap, 2)
@@ -58,6 +64,13 @@ function [xyzPoints, colors] = myTriangulateMidPoints(color1, disparityMap, rot1
 			if any(isnan(point3D)) || any(isinf(point3D))
 				continue;
 			end
+			
+			% discard points too far from the cameras
+			distance = sqrt(sum(point3D.^2));
+			if maxDistance > 0 && distance > maxDistance
+				continue;
+			end
+			
 			xyzSetLength = xyzSetLength + 1;
 			xyzPoints(xyzSetLength, :) = point3D;
 			% The color comes from the rectified color image
