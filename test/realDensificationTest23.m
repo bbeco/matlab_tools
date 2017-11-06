@@ -47,8 +47,8 @@ dm_patchSize = 9;
 %dm_maxDisparity = 180;
 dm_metric = 'NCC';
 dm_regularization = 0;
-dm_alpha = 0.05;
-dm_subtractMeanValue = false;
+dm_alpha = 0.0;
+dm_subtractMeanValue = true;
 dm_horDisparity = 0;
 % densification
 scale = 0.25;
@@ -134,7 +134,7 @@ for i = 1:(lastFrame - 1)
 	if strcmp(dm_metric, 'NCC')
 		[dispLR, dispRL, maskLR, maskRL] = ...
 				computeDisparityNCCEquirectangularCC(im2double(gray1), im2double(gray2), ...
-				dm_patchSize, dm_maxDisparity, ...
+				dm_patchSize, dm_maxDisparity, dm_horDisparity,...
 				dm_metric, dm_regularization, dm_alpha, dm_subtractMeanValue);
 	else
 		[dispLR, dispRL, maskLR, maskRL] = ...

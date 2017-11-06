@@ -1,4 +1,4 @@
-function [dm_LR, dm_RL, dm_mask_LR, dm_mask_RL] = computeDisparityNCCEquirectangularCC(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_metric, dm_regularization, dm_alpha, dm_subtractMeanValue)
+function [dm_LR, dm_RL, dm_mask_LR, dm_mask_RL] = computeDisparityNCCEquirectangularCC(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_horDisparity, dm_metric, dm_regularization, dm_alpha, dm_subtractMeanValue)
 %
 %       [dm_LR, dm_RL, dm_mask_LR, dm_mask_RL] = computeDisparitySlowCC(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_metric, dm_regularization, dm_alpha, dm_subtractMeanValue)
 %
@@ -63,8 +63,14 @@ if ~exist('dm_subtractMeanValue', 'var')
 	dm_subtractMeanValue = true;
 end
 
-[dm_LR, dm_maxDisparity, patchesL, patchesL_sq, patchesL_dx, patchesR, patchesR_sq, patchesR_dx] = computeDisparityNCCEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue);
-[dm_RL, ~, ~, ~, ~, ~, ~, ~] = computeDisparityNCCEquirectangular(imgR, imgL, dm_patchSize, dm_maxDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue, patchesR, patchesR_sq, patchesR_dx, patchesL, patchesL_sq, patchesL_dx);
+[dm_LR, dm_maxDisparity, patchesL, patchesL_sq, patchesL_dx, patchesR, patchesR_sq, patchesR_dx] = computeDisparityNCCEquirectangular(imgL, imgR, dm_patchSize, dm_maxDisparity, dm_horDisparity, dm_regularization, dm_alpha, dm_subtractMeanValue);
+[dm_RL, ~, ~, ~, ~, ~, ~, ~] = computeDisparityNCCEquirectangular(...
+	imgR, imgL, ...
+	dm_patchSize, ...
+	dm_maxDisparity, dm_horDisparity, dm_regularization, dm_alpha, ...
+	dm_subtractMeanValue, ...
+	patchesR, patchesR_sq, patchesR_dx, ...
+	patchesL, patchesL_sq, patchesL_dx);
 
 %consistency check
 [r, c, ~] = size(imgL);

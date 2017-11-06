@@ -41,7 +41,7 @@ function rImg = rotateLL(img, rot)
 	
     rImg = zeros(height, width, c, 'like', img);
 	
-    for i = 1:height
+    parfor i = 1:height
         for j = 1:width
 			%unmapping
 			[rlat, rlong] = extractLLCoordinateFromImage(j, i, width, height);

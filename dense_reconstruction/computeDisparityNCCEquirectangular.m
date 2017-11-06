@@ -63,8 +63,10 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_sq, patchesL_dx, pat
 	% if the patches were not previously computed, do it now
 	if ~exist('patchesL', 'var')
 		patchesL = cell(r, c);
+		patchesL_sq = cell(r, c);
 		patchesL_dx = cell(r, c);
 		patchesR = cell(r, c);
+		patchesR_sq = cell(r, c);
 		patchesR_dx = cell(r, c);
 		parfor j = 1:c
 			disp(['Creating patch: ', num2str(j), '/', num2str(c)]);
@@ -92,7 +94,7 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_sq, patchesL_dx, pat
             % otherwise leave it as it is.
 			%lambda = dm_regularization / (max_v - min_v + 1);
 %             lambda = dm_regularization;
-			corr = 0;
+			corr = -1;
 			depth = 0;
 			
 			min_l = max([u - dm_horDisparity, 1]);
@@ -100,14 +102,14 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_sq, patchesL_dx, pat
 			
 			for k = min_v:max_v
 				for l = min_l:max_l
-					%SSD
-					delta = (patchesL{v, l} - patchesR{k, l}).^2;
-					den = sqrt(sum(patchesL_sq{v, l}(:)) * sum(patchesR_sq(:)))
+					%NCC
+					delta = patchesL{v, l}.*patchesR{k, l};
+					den = sqrt(sum(patchesL_sq{v, l}(:)) * sum(patchesR_sq{k, l}(:)));
 
 					% gradient matching
 					delta_dx_sq = (patchesL_dx{v, l} - patchesR_dx{k, l}).^2;
 
-					tmp_corr = dm_alpha_inv * sum(delta(:))/den + dm_alpha * sum(delta_dx_sq(:));
+					tmp_corr = dm_alpha_inv * sum(delta(:))/den - dm_alpha * sum(delta_dx_sq(:));
 					% simplified formula
 	%  				tmp_err = sum(delta(:));
 					d3 = k - v;
@@ -116,7 +118,7 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_sq, patchesL_dx, pat
 					%tmp_err = tmp_err + lambda * (abs(d3) + abs(d3 - d1) + abs(d3 - d2) );
 
 
-					if tmp_corr < corr
+					if tmp_corr > corr
 						corr = tmp_corr;
 						depth = d3;
 					end
