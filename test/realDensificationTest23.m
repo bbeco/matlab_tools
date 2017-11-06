@@ -53,7 +53,7 @@ dm_horDisparity = 0;
 % densification
 scale = 0.25;
 minDisp = 5;
-maxDistance = -1;
+maxDistance = 10;
 
 %Result dir
 foldername = ['ps', num2str(dm_patchSize), ...
@@ -115,15 +115,15 @@ for i = 1:(lastFrame - 1)
 
 	[height, width, ~] = size(color1);
 
-	figure
-	imshow([color1; color2]);
-	hold on
-	step = 30;
-	for col = 1:step:width
-		line([col, col], [1, 2*height], 'Color', 'r');
-	end
-	title('rectified images');
-	hold off
+% 	figure
+% 	imshow([color1; color2]);
+% 	hold on
+% 	step = 30;
+% 	for col = 1:step:width
+% 		line([col, col], [1, 2*height], 'Color', 'r');
+% 	end
+% 	title('rectified images');
+% 	hold off
 
 	[dm_maxDisparity, ~] = computeMaxDisparity(gray1, gray2);
 

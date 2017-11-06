@@ -58,7 +58,7 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_sq, patchesL_dx, pat
 	disparityMap = zeros(r, c, 2);
 	%temporary variables to use parfor
 	depthMap = zeros(r, c);
-	corrMap = zeros(r, c);
+	corrMap = -1 * ones(r, c);
 	
 	% if the patches were not previously computed, do it now
 	if ~exist('patchesL', 'var')
@@ -72,9 +72,9 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_sq, patchesL_dx, pat
 			disp(['Creating patch: ', num2str(j), '/', num2str(c)]);
 			for i = 1:r
 				[lat, long] = extractLLCoordinateFromImage(j, i, c, r);
-				[patchesL{i, j}, patchesL_sq{i, j}, patchesL_dx{i, j}] = createPatch(imgL, ...
+				[patchesL{i, j}, patchesL_sq{i, j}, ~] = createPatch(imgL, ...
 					lat, long, c, r, dm_patchSize, dm_subtractMeanValue);
-				[patchesR{i, j}, patchesR_sq{i, j}, patchesR_dx{i, j}] = createPatch(imgR, ...
+				[patchesR{i, j}, patchesR_sq{i, j}, ~] = createPatch(imgR, ...
 					lat, long, c, r, dm_patchSize, dm_subtractMeanValue);
 			end
 		end
@@ -107,11 +107,11 @@ function [disparityMap, dm_maxDisparity, patchesL, patchesL_sq, patchesL_dx, pat
 					den = sqrt(sum(patchesL_sq{v, l}(:)) * sum(patchesR_sq{k, l}(:)));
 
 					% gradient matching
-					delta_dx_sq = (patchesL_dx{v, l} - patchesR_dx{k, l}).^2;
+% 					delta_dx_sq = (patchesL_dx{v, l} - patchesR_dx{k, l}).^2;
 
-					tmp_corr = dm_alpha_inv * sum(delta(:))/den - dm_alpha * sum(delta_dx_sq(:));
+% 					tmp_corr = dm_alpha_inv * sum(delta(:))/den - dm_alpha * sum(delta_dx_sq(:));
 					% simplified formula
-	%  				tmp_err = sum(delta(:));
+	 				tmp_corr = sum(delta(:))/den;
 					d3 = k - v;
 
 					% removed just like regularization
