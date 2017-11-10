@@ -50,7 +50,7 @@ function [patch, patch_sq, patch_dx] = createPatch(llImg, plat, plong, llwidth, 
 	end
 	
 	% interpolation method (see interp2 docs);
-	interpMethod = 'nearest';
+	interpMethod = 'linear';
 	
 	radPerPixel = max(2*pi/llwidth, pi/llheight);
 	% This is the physical patch size in the same unit of the 3D sphere radius.
@@ -93,8 +93,8 @@ function [patch, patch_sq, patch_dx] = createPatch(llImg, plat, plong, llwidth, 
 			p = r + k_u*(u - u0)*udir + k_v*(v - v0)*vdir;
 			[lat, long] = cartesian2LL(p);
 			[llu, llv] = ll2equirectangular(lat, long, llwidth, llheight);
-% 			patch(v, u) = interp2(X, Y, V, llu, llv, interpMethod);
-			patch(v, u) = llImg(llv, llu);
+			patch(v, u) = myInterp2(llImg, llu, llv, llwidth, llheight);
+% 			patch(v, u) = llImg(llv, llu);
 		end
 	end
 	

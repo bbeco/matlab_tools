@@ -40,8 +40,9 @@ function rImg = rotateLL(img, rot)
 % 	end
 	
     rImg = zeros(height, width, c, 'like', img);
-	
+% 	[X, Y] = meshgrid(1:width, 1:height);	
     parfor i = 1:height
+% 		disp(['Rectifying column ', num2str(i), '/', num2str(height)]);
         for j = 1:width
 			%unmapping
 			[rlat, rlong] = extractLLCoordinateFromImage(j, i, width, height);
@@ -53,12 +54,13 @@ function rImg = rotateLL(img, rot)
             [lat, long] = cartesian2LL(p);
 			
             %mapping
-            u = (long + pi)/(2*pi)*width;
-            v = (pi/2 - lat)/pi*height;
+            [u, v] = ll2equirectangular(lat, long, width, height);
 			
 			%sampling
 % 			TODO use interpolation when sampling (interp?)
             rImg(i, j, :) = img(max(1, floor(v)), max(1, floor(u)), :);
+			
+% 			rImg(i, j, :) = myInterp2(img, u, v, width, height);
         end
     end
 end
