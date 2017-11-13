@@ -7,15 +7,17 @@ addpath('coordinate_transform');
 addpath('utils');
 addpath('ground_truth');
 addpath('display_images');
+addpath('image_transform/');
 
 baseDir = fullfile('images/densification_test/test4/');
 
-img1 = rgb2gray(imread(fullfile(baseDir, 'RectL.png')));
-img2 = rgb2gray(imread(fullfile(baseDir, 'RectR.png')));
+img1 = rgb2gray(imread(fullfile(baseDir, 'RectL_vertical.png')));
+img2 = rgb2gray(imread(fullfile(baseDir, 'RectR_vertical.png')));
 
 img1 = imresize(img1, 0.25);
 img2 = imresize(img2, 0.25);
 
+imshow([img1, img2]);
 
 [height, width, ~] = size(img1);
 
@@ -25,7 +27,7 @@ dm_patchSize = 7;
 %dm_maxDisparity = 180;
 dm_metric = 'NCC';
 dm_regularization = 0;
-dm_alpha = 0.05;
+dm_alpha = 0.0;
 dm_subtractMeanValue = false;
 dm_maxDisparity = -1;
 dm_horDisparity = 5;
@@ -42,7 +44,7 @@ foldername = ['ps', num2str(dm_patchSize), ...
 	'_subtractMean', num2str(dm_subtractMeanValue), ...
 	'_dm_maxDisparity', num2str(dm_maxDisparity), ...
 	'_dm_horDisparity', num2str(dm_horDisparity)];
-resultsDir = fullfile('../results/disparityMapTest/', foldername);
+resultsDir = fullfile('/tmp/disparityMapTest/', foldername);
 if exist(resultsDir, 'dir') == 0
 	mkdir(resultsDir);
 end
@@ -53,9 +55,9 @@ end
 % calcoli il valore corretto dalla GUI
 if strcmp(dm_metric, 'NCC')
 	[dispLR, dispRL, maskLR, maskRL] = ...
-			computeDisparityNCCEquirectangularCC(im2double(img1), im2double(img2), ...
-			dm_patchSize, dm_maxDisparity, dm_horDisparity, ...
-			dm_metric, dm_regularization, dm_alpha, dm_subtractMeanValue);
+			computeDisparitySlowCC(im2double(img1), im2double(img2), ...
+			dm_patchSize, dm_maxDisparity, ...
+			dm_metric, dm_regularization, dm_alpha);
 		
 	tmp = dispLR(:,:,2) > 0.5;
 	disparityMap = dispLR(:,:,1) .* tmp;
