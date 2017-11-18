@@ -325,8 +325,8 @@ function [vSet, worldPoints, reprojectionErrors, ...
 			v = max(1, v);
 			colors(i, :) = coloredImg{imgNumber}(v, u, :);
 		end
-		worldPoints{1, 1} = xyzPoints;
-		worldPoints{1, 2} = colors;
+		worldPoints{1} = xyzPoints;
+		worldPoints{2} = colors;
 		
 		% Store the refined camera poses.
 		vSet = updateView(vSet, camPoses);

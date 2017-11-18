@@ -12,16 +12,15 @@ baseDir = fullfile('images/sfm_test/test27_fontana_empoli3');
 sfmResults = load(fullfile('../results/realSeqTest/test27/workspace.mat'));
 
 % Sparse point cloud
-sparsePoints{1, 1} = sfmResults.xyzPoints;
-sparsePoints{1, 2} = uint8([255, 0, 0]);
-sparsePoints{1, 2} = repmat(sparsePoints{1, 2}, length(sparsePoints{1, 1}), 1);
+sparsePoints{1} = sfmResults.xyzPoints{1};
+sparsePoints{2} = sfmResults.xyzPoints{2};
 resultsDir = fullfile(...
 	'../results/realDensificationTest/test27_fontana_empoli3');
 filename = fullfile(resultsDir, 'sparse.ply');
 if exist(filename, 'file') ~= 0
 	delete(filename);
 end
-writePointCloudPLY(sparsePoints{1, 1}, sparsePoints{1, 2}, filename);
+writePointCloudPLY(sparsePoints{1}, sparsePoints{2}, filename);
 
 % extracting camera's poses
 poses = sfmResults.vSet.poses();
@@ -39,28 +38,31 @@ for i = 1:length(imagesNumber)
 end
 
 % lastFrame = size(images, 2);
-lastFrame = 6;
+lastFrame = 7;
 
 % how many views to skip to form a pair.
-viewStep = 4;
+viewStep = 3;
 
 dispList = cell(lastFrame - 1, 2);
 
 % disparity parameters
-dm_patchSize = 5;
+dm_patchSize = 7;
 % disparityList = 1:5:width;
 %dm_maxDisparity = 180;
-dm_metric = 'SSD';
+dm_metric = 'NCC';
 dm_regularization = 0;
 dm_alpha = 0.05;
-dm_subtractMeanValue = false;
+dm_subtractMeanValue = true;
 dm_maxDisparity = -1;
-dm_horDisparity = 5;
+dm_horDisparity = 3;
 % densification
-minDisp = 5;
+minDisp = 2;
 scale = 0.25;
 
-maxDistance = 3;
+maxDistance = -1;
+
+qy = 1;
+qx = 0.98;
 
 %Result dir
 foldername = ['ps', num2str(dm_patchSize), ...
@@ -117,19 +119,20 @@ for i = firstFrame:(lastFrame - viewStep)
 
 	[height, width, ~] = size(color1);
 
-% 	figure(1)
-% 	imshow([color1; color2]);
-% 	hold on
-% 	step = 30;
-% 	for col = 1:step:width
-% 		line([col, col], [1, 2*height], 'Color', 'r');
-% 	end
-% 	title('rectified images');
-% 	hold off
-% 	drawnow;
+	figure(1)
+	imshow([color1; color2]);
+	hold on
+	step = 30;
+	for col = 1:step:width
+		line([col, col], [1, 2*height], 'Color', 'r');
+	end
+	title('rectified images');
+	hold off
+	drawnow;
 
 	if dm_maxDisparity < 0
-		[dm_maxDisparity, dm_horDisparity] = computeMaxDisparity(gray1, gray2);
+		[dm_maxDisparity, ~] = computeMaxDisparity(...
+			gray1, gray2, qy, qx);
 	end
 
 	disparityRange = [-dm_maxDisparity, dm_maxDisparity];

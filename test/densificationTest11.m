@@ -15,9 +15,33 @@ poses = alignOrientation(poses);
 
 images{1} = imread(fullfile(baseDir, 'll1.png'));
 images{2} = imread(fullfile(baseDir, 'll2.png'));
-% images{3} = imread(fullfile(baseDir, 'll3.png'));
+images{3} = imread(fullfile(baseDir, 'll3.png'));
 
 dispList = cell(numel(images) - 1, 2);
+
+% disparity parameters
+dm_patchSize = 5;
+% disparityList = 1:5:width;
+%dm_maxDisparity = 180;
+dm_metric = 'SSD';
+dm_regularization = 0;
+dm_alpha = 0.05;
+dm_subtractMeanValue = false;
+dm_horDisparity = 0;
+dm_maxDisparity = -1;
+maxDistance = 10;
+minDisp = 3;
+
+%Result dir
+foldername = ['ps', num2str(dm_patchSize), ...
+	'_metric', dm_metric, ...
+	'_regularization', num2str(dm_regularization), ...
+	'_alpha', num2str(dm_alpha), ...
+	'_subtractMean', num2str(dm_subtractMeanValue)];
+resultsDir = fullfile('../results/densification_test/densification11', foldername);
+if exist(resultsDir, 'dir') == 0
+	mkdir(resultsDir);
+end
 
 % this contains N world points stored as an xyz vector and an RGB vector
 worldPoints = cell(1, 2);
@@ -32,7 +56,7 @@ for i = 1:(numel(images) - 1)
 	% This function returns the rotation that has been applied to the first
 	% camera (in the pre-multiply form)
 	disp(['Rectifying pair: ', num2str(i)]);
-	[color1, color2, rot] = rectifyImages(images{i}, images{i + 1}, ...
+	[color1, color2, rot1, rot2] = rectifyImages(images{i}, images{i + 1}, ...
 		loc1, loc2, orient1, orient2);
 
 	% resizing for performances
@@ -54,28 +78,9 @@ for i = 1:(numel(images) - 1)
 	title('rectified images');
 	hold off
 
-	% disparity parameters
-	dm_patchSize = 11;
-	% disparityList = 1:5:width;
-	%dm_maxDisparity = 180;
-	dm_metric = 'SSD';
-	dm_regularization = 0;
-	dm_alpha = 0;
-	dm_subtractMeanValue = false;
-	dm_horDisparity = 0;
-	
-	%Result dir
-	foldername = ['ps', num2str(dm_patchSize), ...
-		'_metric', dm_metric, ...
-		'_regularization', num2str(dm_regularization), ...
-		'_alpha', num2str(dm_alpha), ...
-		'_subtractMean', num2str(dm_subtractMeanValue)];
-	resultsDir = fullfile('../results/densification_test/densification11', foldername);
-	if exist(resultsDir, 'dir') == 0
-		mkdir(resultsDir);
+	if dm_maxDisparity < 0
+		[dm_maxDisparity, ~] = computeMaxDisparity(gray1, gray2);
 	end
-
-	[dm_maxDisparity, ~] = computeMaxDisparity(gray1, gray2);
 
 	disparityRange = [-dm_maxDisparity, dm_maxDisparity];
 
@@ -112,9 +117,10 @@ for i = 1:(numel(images) - 1)
 	disparityMap = dispLR.*maskLR;
 	baseline = norm(loc2 - loc1);
 	% densification
-	minDisp = 3;
 	[xyzPoints, colors] = ...
-		triangulateImagePoints(color1, disparityMap, baseline, minDisp);
+		myTriangulateMidPoints(color1, disparityMap, ...
+		rot1, rot2, ...
+		loc1, loc2, orient1, orient2, minDisp, maxDistance);
 	
 	filename = fullfile(resultsDir, ['pair', num2str(i), '.ply']);
 	if exist(filename, 'file') ~= 0
@@ -125,8 +131,9 @@ for i = 1:(numel(images) - 1)
 	%translating 3D points to the common coordinate system
 	for j = 1:size(xyzPoints, 1)
 		vec = xyzPoints(j, :)';
-		vec = orient1' * rot * vec;
-		xyzPoints(j, :) = vec' + loc1;
+		%vec = orient1' * rot * vec;
+		vec = orient1' * vec + loc1';
+		xyzPoints(j, :) = vec';
 	end
 	
 	%add points to the existing set

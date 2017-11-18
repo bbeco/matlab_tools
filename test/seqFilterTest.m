@@ -8,11 +8,11 @@ addpath(fullfile('data_analysis'));
 dataFolder = fullfile('images', 'sfm_test', 'test10_synthSquare');
 % dataFolder = fullfile('images/sfm_test/test8');
 imageDir = fullfile(dataFolder, '*.png');
-% load(fullfile(dataFolder, 'groundTruth.mat'));
+load(fullfile(dataFolder, 'groundTruth.mat'));
 
 % Normalizing ground truth
-% groundTruthPoses = translateLocation(groundTruthPoses);
-% groundTruthPoses = alignOrientation(groundTruthPoses);
+groundTruthPoses = translateLocation(groundTruthPoses);
+groundTruthPoses = alignOrientation(groundTruthPoses);
 
 resultBaseFolder = fullfile('../results/seqFilterTest_corner');
 
@@ -20,7 +20,7 @@ paramTable = table({'name'}, {'file'}, 0, 0, ...
 	'VariableNames', {'DataSeriesName', 'OutputFileName', 'AngularThreshold',...
 	'WindowSize'});
 repmat(paramTable, length(0:5:30), 1);
-thresholdList = [8];
+thresholdList = [5];
 windowSizeList = [5];
 j = 0;
 for windowSize = windowSizeList
@@ -40,14 +40,14 @@ end
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = false;
+enableFigures = true;
 repetitions = 1;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 0.8;
 
 % filter those matches whose points have similar coordinates
-filterMatches = false;
+filterMatches = true;
 angularThreshold = 2; %degrees
 
 % minimun threshold for the third components of key points directions.
@@ -55,7 +55,7 @@ angularThreshold = 2; %degrees
 % essential matrix estimation
 zMin = 0.04;
 
-prefilterLLKeyPoints = false;
+prefilterLLKeyPoints = true;
 maxLatitudeAngle = 60; %degrees
 
 % Bundle Adjustment parameters
@@ -128,14 +128,14 @@ for k = 1:height(paramTable)
 		
 		% setting the same reference for both the estimated poses and ground
 		% truth.
-% 		[vSet, ~] = normalizeCameraPosesWithGroundTruth(vSet, ...
-% 			groundTruthPoses(frameUsed{i, k}, :));
+		[vSet, ~] = normalizeCameraPosesWithGroundTruth(vSet, ...
+			groundTruthPoses(frameUsed{i, k}, :));
 
 		%% Writing results
-		[locError{i, k}, orientError{i, k}] = writeExperimentResultsOnFile(...
-			[paramTable.OutputFileName{k}, '_rep', num2str(i), '.xlsx'], ...
-			vSet, groundTruthPoses, pointsForEEstimationCounter{i, k}, ...
-			pointsForPoseEstimationCounter{i, k}, trackSize{i, k}', frameUsed{i, k}');
+% 		[locError{i, k}, orientError{i, k}] = writeExperimentResultsOnFile(...
+% 			[paramTable.OutputFileName{k}, '_rep', num2str(i), '.xlsx'], ...
+% 			vSet, groundTruthPoses, pointsForEEstimationCounter{i, k}, ...
+% 			pointsForPoseEstimationCounter{i, k}, trackSize{i, k}', frameUsed{i, k}');
 		
 		if enableFigures
 			% Display camera poses.
@@ -242,6 +242,9 @@ camPoses = cat(1, camPoses.Location{:});
 camColors = repmat(uint8([0 255 0]), size(camPoses, 1), 1);
 writePointCloudPLY(camPoses, camColors, fullfile(resultBaseFolder, 'camera_location.ply'));
 writePointCloudPLY(xyzPoints{1, 1}, xyzPoints{1, 2}, fullfile(resultBaseFolder, 'sparse.ply'));
+gtCamPoses = cat(1, groundTruthPoses.Location{frameUsed{1,1}});
+gtCamColors = repmat(uint8([255 0 0]), size(gtCamPoses, 1), 1);
+writePointCloudPLY(gtCamPoses, gtCamColors, fullfile(resultBaseFolder, 'ground_truth_poses.ply'));
 
 %% Saving environment
 save(fullfile(resultBaseFolder, 'workspace.mat'));

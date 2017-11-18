@@ -1,10 +1,15 @@
-function [dm_maxDisparity, dm_horDisparity] = computeMaxDisparity(gray1,gray2)
+function [dm_maxDisparity, dm_horDisparity] = computeMaxDisparity(gray1, gray2, qy, qx)
 %COMPUTEMAXDISPARITY detects and matches features in the given images and
 	%returns the maximum disparity value.
 	
+	if ~exist('qy', 'var')
 	% This is the quantile analysed for disparities
-	qy = 0.9;
-	qx = 0.8;
+		qy = 0.9;
+	end
+	if ~exist('qx', 'var')
+		qx = 0.8;
+	end
+	
 	points1 = detectSURFFeatures(gray1);
 	points2 = detectSURFFeatures(gray2);
 

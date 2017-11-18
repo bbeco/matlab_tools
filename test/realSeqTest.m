@@ -71,8 +71,8 @@ paramTable = table({'name'}, {'inData'}, 0, 0, {'outFile'}, false, false, 0, ...
 	'VariableNames', varNames ...
 );
 
-thresholdList = [10];
-windowSizeList = [4];
+thresholdList = [5];
+windowSizeList = [5];
 
 repmat(paramTable, length(thresholdList)*length(windowSizeList), 1);
 

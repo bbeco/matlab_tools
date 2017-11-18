@@ -5,22 +5,22 @@ addpath(fullfile('filters'));
 addpath(fullfile('ground_truth'));
 addpath(fullfile('data_analysis'));
 % addpath(fullfile('plot'));
-dataFolder = fullfile('images', 'sfm_test', 'test10_synthSquare');
+dataFolder = fullfile('images', 'sfm_test', 'test27_fontana_empoli3');
 % dataFolder = fullfile('images/sfm_test/test8');
-imageDir = fullfile(dataFolder, '*.png');
+imageDir = fullfile(dataFolder, '*.jpg');
 % load(fullfile(dataFolder, 'groundTruth.mat'));
 
 % Normalizing ground truth
 % groundTruthPoses = translateLocation(groundTruthPoses);
 % groundTruthPoses = alignOrientation(groundTruthPoses);
 
-resultBaseFolder = fullfile('../results/seqFilterTest_corner');
+resultBaseFolder = fullfile('../results/realSeqTest/test27');
 
 paramTable = table({'name'}, {'file'}, 0, 0, ...
 	'VariableNames', {'DataSeriesName', 'OutputFileName', 'AngularThreshold',...
 	'WindowSize'});
 repmat(paramTable, length(0:5:30), 1);
-thresholdList = [8];
+thresholdList = [5];
 windowSizeList = [5];
 j = 0;
 for windowSize = windowSizeList
@@ -40,14 +40,14 @@ end
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = false;
+enableFigures = true;
 repetitions = 1;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
 maxAcceptedReprojectionError = 0.8;
 
 % filter those matches whose points have similar coordinates
-filterMatches = false;
+filterMatches = true;
 angularThreshold = 2; %degrees
 
 % minimun threshold for the third components of key points directions.
@@ -55,7 +55,7 @@ angularThreshold = 2; %degrees
 % essential matrix estimation
 zMin = 0.04;
 
-prefilterLLKeyPoints = false;
+prefilterLLKeyPoints = true;
 maxLatitudeAngle = 60; %degrees
 
 % Bundle Adjustment parameters
@@ -75,9 +75,10 @@ seqFilterQuantile = 0.8;
 % **********************************
 
 imds = imageDatastore(imageDir);
-firstFrame = 100;
-lastFrame = 240;
-seqLength = numel(imds.Files);
+firstFrame = 1;
+lastFrame = 400;
+% seqLength = numel(imds.Files);
+seqLength = lastFrame - firstFrame + 1;
 %The following is the actual number of images processed
 % seqLength = 121;
 pointsForEEstimationCounter = cell(repetitions, size(paramTable, 1));
@@ -132,10 +133,10 @@ for k = 1:height(paramTable)
 % 			groundTruthPoses(frameUsed{i, k}, :));
 
 		%% Writing results
-		[locError{i, k}, orientError{i, k}] = writeExperimentResultsOnFile(...
-			[paramTable.OutputFileName{k}, '_rep', num2str(i), '.xlsx'], ...
-			vSet, groundTruthPoses, pointsForEEstimationCounter{i, k}, ...
-			pointsForPoseEstimationCounter{i, k}, trackSize{i, k}', frameUsed{i, k}');
+% 		[locError{i, k}, orientError{i, k}] = writeExperimentResultsOnFile(...
+% 			[paramTable.OutputFileName{k}, '_rep', num2str(i), '.xlsx'], ...
+% 			vSet, groundTruthPoses, pointsForEEstimationCounter{i, k}, ...
+% 			pointsForPoseEstimationCounter{i, k}, trackSize{i, k}', frameUsed{i, k}');
 		
 		if enableFigures
 			% Display camera poses.
@@ -143,9 +144,9 @@ for k = 1:height(paramTable)
 			figure;
 			plotCamera(camPoses, 'Size', 0.2);
 			hold on
-			tmp = groundTruthPoses(frameUsed{i, k}, :);
-			tmp.ViewId = camPoses.ViewId;
-			plotCamera(tmp, 'Size', 0.2, 'Color', [0 1 0]);
+% 			tmp = groundTruthPoses(frameUsed{i, k}, :);
+% 			tmp.ViewId = camPoses.ViewId;
+% 			plotCamera(tmp, 'Size', 0.2, 'Color', [0 1 0]);
 
 			xlabel('X');
 			ylabel('Y');
@@ -156,7 +157,7 @@ for k = 1:height(paramTable)
 % 			xyzPoints = xyzPoints(goodIdx, :);
 
 			% Display the 3-D points.
-			pcshow(xyzPoints, 'VerticalAxis', 'y', 'VerticalAxisDir', 'down', ...
+			pcshow(xyzPoints{1}, xyzPoints{2}, 'VerticalAxis', 'y', 'VerticalAxisDir', 'down', ...
 				'MarkerSize', 45);
 			grid on
 			hold off
@@ -241,7 +242,7 @@ camPoses = poses(vSet);
 camPoses = cat(1, camPoses.Location{:});
 camColors = repmat(uint8([0 255 0]), size(camPoses, 1), 1);
 writePointCloudPLY(camPoses, camColors, fullfile(resultBaseFolder, 'camera_location.ply'));
-writePointCloudPLY(xyzPoints{1, 1}, xyzPoints{1, 2}, fullfile(resultBaseFolder, 'sparse.ply'));
+writePointCloudPLY(xyzPoints{1}, xyzPoints{2}, fullfile(resultBaseFolder, 'sparse.ply'));
 
 %% Saving environment
 save(fullfile(resultBaseFolder, 'workspace.mat'));

@@ -44,8 +44,6 @@ lastFrame = size(images, 2);
 % how many views to skip to form a pair.
 viewStep = 4;
 
-dispList = cell(lastFrame - 1, 2);
-
 % disparity parameters
 dm_patchSize = 5;
 % disparityList = 1:5:width;
@@ -86,11 +84,15 @@ if exist(statusFileName, 'file')
 	worldPoints = status.worldPoints;
 	firstFrame = status.i + 1;
 	cameras = status.cameras;
+	dispList = status.dispList;
+	xyzPoints = status.xyzPoints;
 else
 	% this contains N world points stored as an xyz vector and an RGB vector
 	worldPoints = cell(1, 2);
 	firstFrame = 1;
 	cameras = cell(1, 2);
+	dispList = cell(size(images, 2) - viewStep, 2);
+	xyzPoints = cell(size(images, 2) - viewStep, 2);
 end
 for i = firstFrame:(lastFrame - viewStep)
 	
@@ -179,7 +181,7 @@ for i = firstFrame:(lastFrame - viewStep)
 % 	densification
 % 	[xyzPoints, colors] = ...
 % 		triangulateImagePoints(color1, disparityMap, baseline, minDisp);
-	[xyzPoints, colors] = ...
+	[xyzPoints{i, 1}, xyzPoints{i, 2}] = ...
 		myTriangulateMidPoints(color1, disparityMap, ...
 		rot1, rot2, ...
 		loc1, loc2, orient1, orient2, minDisp, maxDistance);
@@ -191,26 +193,27 @@ for i = firstFrame:(lastFrame - viewStep)
 	if exist(filename, 'file') ~= 0
 		delete(filename);
 	end
-	writePointCloudPLY(xyzPoints, colors, filename);
+	writePointCloudPLY(xyzPoints{i, 1}, xyzPoints{i, 2}, filename);
 	
 	%translating 3D points to the common coordinate system
-	for j = 1:size(xyzPoints, 1)
-		vec = xyzPoints(j, :)';
+	for j = 1:size(xyzPoints{i, 1}, 1)
+		vec = xyzPoints{i, 1}(j, :)';
 % 		vec = orient1' * rot * vec;
+		%questa rotazione forse e' da invertire
 		vec = orient1' * vec;
-		xyzPoints(j, :) = vec' + loc1;
+		xyzPoints{i, 1}(j, :) = vec' + loc1;
 	end
 	
 	%add points and cameras to the existing set
-	worldPoints{1} = [worldPoints{1}; xyzPoints];
-	worldPoints{2} = [worldPoints{2}; colors];
+	worldPoints{1} = [worldPoints{1}; xyzPoints{i, 1}];
+	worldPoints{2} = [worldPoints{2}; xyzPoints{i, 2}];
 	
 	%saving cameras' location
 	cameras{1} = [cameras{1}; loc1; loc2];
 	cameras{2} = [cameras{2}; 0 255 0; 0 255 0];
 	
 	% Saving status
-	save(statusFileName, 'i', 'worldPoints', 'cameras');
+	save(statusFileName, 'i', 'worldPoints', 'cameras', 'xyzPoints', 'dispList');
 end
 
 filename = fullfile(resultsDir, ['total_points_', foldername, '.ply']);
