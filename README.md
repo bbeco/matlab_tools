@@ -1,5 +1,8 @@
 # 3D Environments Reconstruction Using 360° Videos
 
+![Equirectangular image example](readme_files/piazzaLeoni.jpg)
+![Reconstruction example](readme_files/reconstruction.gif)
+
 This repository contains all the source code I wrote for my master thesis, in particular, it contains the MATLAB scripts of my SfM and Dense Point Cloud Reconstruction Pipeline for equirectangular video sequences (produced with a Ricoh Theta S, a full-spherical panoramic camera).
 
 The pipeline is composed of two steps: camera motion estimation and dense reconstruction. For the first step it estimates the essential matrix for each image pairs and decompose it to obtain the position of the camera in the second view according to the first view. The complete trajectory is the results of the composition of the local movement for each image pair. Drift is reduced with a windowed bundle adjustment.
