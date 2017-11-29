@@ -6,7 +6,7 @@ The pipeline is composed of two steps: camera motion estimation and dense recons
 
 The second phase creates a dense point cloud using disparity maps: the pipeline selects image pairs and computes the disparity maps with our adaptive block-matching algorithm.
 
-For more details on how this pipeline works, see [my thesis](https://) for Markdown parsing
+For more details on how this pipeline works, see [my thesis](https://github.com/bbeco/matlab_tools/raw/master/thesis.pdf).
 
 ## Abstract
 360° degrees or full spherical images are gaining a huge interest in different fields such as autonomous driving, cinematography, augmented reality (AR), and virtual reality (VR).
