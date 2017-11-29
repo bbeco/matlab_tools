@@ -14,13 +14,13 @@ load(fullfile(dataFolder, 'groundTruth.mat'));
 groundTruthPoses = translateLocation(groundTruthPoses);
 groundTruthPoses = alignOrientation(groundTruthPoses);
 
-resultBaseFolder = fullfile('../results/seqFilterTest_corner');
+resultBaseFolder = fullfile('../results/seqFilterTest_corner2');
 
 paramTable = table({'name'}, {'file'}, 0, 0, ...
 	'VariableNames', {'DataSeriesName', 'OutputFileName', 'AngularThreshold',...
 	'WindowSize'});
 repmat(paramTable, length(0:5:30), 1);
-thresholdList = [5];
+thresholdList = [10];
 windowSizeList = [5];
 j = 0;
 for windowSize = windowSizeList
@@ -40,7 +40,7 @@ end
 
 % ********** PARAMETERS ************
 % whether to plot camera position or not
-enableFigures = true;
+enableFigures = false;
 repetitions = 1;
 
 computeRelativeScaleBeforeBundleAdjustment = true;
@@ -84,8 +84,12 @@ pointsForEEstimationCounter = cell(repetitions, size(paramTable, 1));
 pointsForPoseEstimationCounter = cell(repetitions, size(paramTable, 1));
 frameUsed = cell(repetitions, size(paramTable, 1));
 trackSize = cell(repetitions, size(paramTable, 1));
-locError = cell(repetitions, size(paramTable, 1));
-orientError = cell(repetitions, size(paramTable, 1));
+%
+relLocError = cell(repetitions, size(paramTable, 1));
+relOrientError = cell(repetitions, size(paramTable, 1));
+absLocError = cell(repetitions, size(paramTable, 1));
+absOrientError = cell(repetitions, size(paramTable, 1));
+
 angularXerror = cell(repetitions, size(paramTable, 1));
 angularYerror = cell(repetitions, size(paramTable, 1));
 angularZerror = cell(repetitions, size(paramTable, 1));
@@ -128,8 +132,8 @@ for k = 1:height(paramTable)
 		
 		% setting the same reference for both the estimated poses and ground
 		% truth.
-		[vSet, ~] = normalizeCameraPosesWithGroundTruth(vSet, ...
-			groundTruthPoses(frameUsed{i, k}, :));
+% 		[vSet, ~] = normalizeCameraPosesWithGroundTruth(vSet, ...
+% 			groundTruthPoses(frameUsed{i, k}, :));
 
 		%% Writing results
 % 		[locError{i, k}, orientError{i, k}] = writeExperimentResultsOnFile(...
@@ -171,28 +175,30 @@ for k = 1:height(paramTable)
 			title(['Refined Camera Poses ', paramTable.DataSeriesName{k}]);
 		end
 
-		angularZerror{i, k} = orientError{i, k}(:, 1);
-		angularYerror{i, k} = orientError{i, k}(:, 2);
-		angularXerror{i, k} = orientError{i, k}(:, 3);
+		[relLocError{i, k}, relOrientError{i, k}] = computeRelativeErrorNew(vSet, groundTruthPoses, frameUsed{i, k});
+		[absLocError{i, k}, absOrientError{i, k}] = computeAbsErrorNew(vSet, groundTruthPoses, frameUsed{i, k});
+% 		angularZerror{i, k} = orientError{i, k}(:, 1);
+% 		angularYerror{i, k} = orientError{i, k}(:, 2);
+% 		angularXerror{i, k} = orientError{i, k}(:, 3);
 		
 	end
 end
 
-for k = 1:height(paramTable)
-	% saving sum of absolute errors
-	sumAbsLocError(k) = mean(sum(cat(2, locError{:, k})));
-	sumAbsLocErrorCI(k) = computeMeanConfidenceInterval(...
-		sum(cat(2, locError{:, k}))');
-	sumAbsOrientError(k, 1) = mean(sum(cat(2, angularXerror{:, k})));
-	sumAbsOrientErrorCI(k, 1) = ...
-		computeMeanConfidenceInterval(sum(cat(2, angularXerror{:, k}))');
-	sumAbsOrientError(k, 2) = mean(sum(cat(2, angularYerror{:, k})));
-	sumAbsOrientErrorCI(k, 2) = ...
-		computeMeanConfidenceInterval(sum(cat(2, angularYerror{:, k}))');
-	sumAbsOrientError(k, 3) = mean(sum(cat(2, angularZerror{:, k})));
-	sumAbsOrientErrorCI(k, 3) = ...
-		computeMeanConfidenceInterval(sum(cat(2, angularZerror{:, k}))');
-end
+% for k = 1:height(paramTable)
+% 	% saving sum of absolute errors
+% 	sumAbsLocError(k) = mean(sum(cat(2, locError{:, k})));
+% 	sumAbsLocErrorCI(k) = computeMeanConfidenceInterval(...
+% 		sum(cat(2, locError{:, k}))');
+% 	sumAbsOrientError(k, 1) = mean(sum(cat(2, angularXerror{:, k})));
+% 	sumAbsOrientErrorCI(k, 1) = ...
+% 		computeMeanConfidenceInterval(sum(cat(2, angularXerror{:, k}))');
+% 	sumAbsOrientError(k, 2) = mean(sum(cat(2, angularYerror{:, k})));
+% 	sumAbsOrientErrorCI(k, 2) = ...
+% 		computeMeanConfidenceInterval(sum(cat(2, angularYerror{:, k}))');
+% 	sumAbsOrientError(k, 3) = mean(sum(cat(2, angularZerror{:, k})));
+% 	sumAbsOrientErrorCI(k, 3) = ...
+% 		computeMeanConfidenceInterval(sum(cat(2, angularZerror{:, k}))');
+% end
 
 %% sum absolute errors
 % figure;
