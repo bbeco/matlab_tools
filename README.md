@@ -1,6 +1,6 @@
 # 3D Environments Reconstruction Using 360° Videos
 
-![Equirectangular image example](readme_files/piazzaLeoni.jpg)
+![Equirectangular image example](readme_files/equirectangular.jpg)
 ![Reconstruction example](readme_files/reconstruction.gif)
 
 This repository contains all the source code I wrote for my master thesis, in particular, it contains the MATLAB scripts of my SfM and Dense Point Cloud Reconstruction Pipeline for equirectangular video sequences (produced with a Ricoh Theta S, a full-spherical panoramic camera).
